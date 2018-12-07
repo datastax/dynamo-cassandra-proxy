@@ -1,0 +1,15 @@
+{
+  "TableName": "test",
+  "Item": {
+    "favorites": {
+      "SS": [
+        "puppies",
+        "kittens",
+        "other cute animals"
+      ]
+    },
+    "city": {
+      "S": "NYC"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "TableName":"test",
+  "KeyConditionExpression":"hash_key = :hash_key_value"
+}
