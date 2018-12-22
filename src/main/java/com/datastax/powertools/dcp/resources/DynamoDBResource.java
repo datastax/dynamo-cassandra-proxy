@@ -8,6 +8,7 @@ package com.datastax.powertools.dcp.resources;
 
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.datastax.powertools.dcp.managed.DynamoManager;
 import org.glassfish.jersey.server.ManagedAsync;
@@ -75,12 +76,17 @@ public class DynamoDBResource {
     @Path("/putItem")
     public void putItem(@Suspended final AsyncResponse asyncResponse,
                                  @DefaultValue("test") @QueryParam(value="table_name") String table_name,
-                                 @DefaultValue("hash_key") @QueryParam(value="hash_key") String hashKey
+                                 @DefaultValue("hash_key") @QueryParam(value="hash_key") String hashKey,
+                                 @DefaultValue("1.0") @QueryParam(value="hash_value") String hashValue,
+                                 @DefaultValue("sort_key") @QueryParam(value="sort_key") String sortKey,
+                                 @DefaultValue("2.0") @QueryParam(value="sort_value") String sortValue
     ) {
 
         List<String> favorites = Arrays.asList("puppies", "kittens", "other cute animals");
         Map<String, AttributeValue> item = new HashMap<>();
         AttributeValue attributeValue = new AttributeValue(favorites);
+        item.put(hashKey, new AttributeValue(hashValue));
+        item.put(sortKey, new AttributeValue(sortValue));
         item.put("favorites", attributeValue);
         item.put("city", new AttributeValue("NYC"));
         PutItemRequest putItemRequest = new PutItemRequest(table_name, item);
@@ -96,13 +102,29 @@ public class DynamoDBResource {
     public void query(@Suspended final AsyncResponse asyncResponse,
                                  @DefaultValue("test") @QueryParam(value="table_name") String table_name,
                                  @DefaultValue("hash_key") @QueryParam(value="hash_key") String hashKey,
-                                 @DefaultValue("hash_key_value") @QueryParam(value="hash_key_value") String hashKeyValue
+                                 @DefaultValue("1.0") @QueryParam(value="hash_key_value") String hashKeyValue
     ) {
 
+        String alias = ":v_id";
+        AttributeValue attributeValue = new AttributeValue().withN(hashKeyValue);
+        Map<String, AttributeValue> attributeValues = new HashMap<>();
+        attributeValues.put(alias, attributeValue);
+
+        Condition hasKeyCondition = new Condition().
+                withComparisonOperator(ComparisonOperator.EQ).
+                withAttributeValueList(attributeValue);
+
+        HashMap<String, Condition> keyConditions = new HashMap<String, Condition>();
+
+        keyConditions.put(alias , hasKeyCondition);
 
         QueryRequest queryReq = new QueryRequest()
                 .withTableName(table_name)
-                .withKeyConditionExpression(hashKey+ " = :" + hashKeyValue);
+                .withKeyConditionExpression(hashKey + "= "+alias)
+                .withExpressionAttributeValues(attributeValues);
+
+       // TODO add new method with key condition
+       //         .withKeyConditions(keyConditions);
 
         QueryResult response = ddb.query(queryReq);
 

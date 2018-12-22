@@ -18,14 +18,14 @@ public class DSEStmts {
     private static final String REPLICATION_STRATEGY_PATTERN = ";;;REPLICATION_STRATEGY;;;";
 
     private static String STMT_create_keyspace = String.format("CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = %s ;", KEYSPACE_PATTERN, REPLICATION_STRATEGY_PATTERN);
-    private static String STMT_get_tables = String.format("SELECT * FROM %s.%s", "system_schema", "tables");
+    private static String STMT_get_columns = String.format("SELECT * FROM %s.%s WHERE keyspace_name = '%s' ;", "system_schema", "columns", KEYSPACE_PATTERN);
 
     public static class Prepared {
         private final String keyspace;
         private final Session session;
         private final String replicationStrategy;
 
-        final PreparedStatement get_tables;
+        final PreparedStatement get_columns;
         final PreparedStatement create_keyspace;
 
         public Prepared(Session session, String keyspace, String replicationStrategy) {
@@ -35,13 +35,13 @@ public class DSEStmts {
 
             create_keyspace = prepare(STMT_create_keyspace);
 
-            //Ensure the dynamo keyspace exists
+            //Ensure the dynamo keyspaceName exists
             session.execute(create_keyspace.bind());
 
-            get_tables = prepare(STMT_get_tables);
+            get_columns = prepare(STMT_get_columns);
         }
 
-        private PreparedStatement prepare(String stmt) {
+        public PreparedStatement prepare(String stmt) {
             String withKeyspace
                     = stmt.replaceAll(KEYSPACE_PATTERN, this.keyspace);
             String withReplication

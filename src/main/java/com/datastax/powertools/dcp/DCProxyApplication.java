@@ -7,6 +7,8 @@ import com.datastax.powertools.dcp.resources.DynamoDBResource;
 import io.dropwizard.Application;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 public class DCProxyApplication extends Application<DCProxyConfiguration> {
 
@@ -33,7 +35,15 @@ public class DCProxyApplication extends Application<DCProxyConfiguration> {
         dseManager.configure(configuration);
         environment.lifecycle().manage(dseManager);
 
-        final DCProxyResource dcProxyResource = new DCProxyResource(dseManager);
+        TranslatorType translatorType = configuration.getTranslatorImplementation();
+        DynamoDSETranslator ddt;
+        if (translatorType == TranslatorType.JSON_BLOB){
+             ddt = new DynamoDSETranslatorJSONBlob(dseManager);
+        }else{
+            // TODO: Implement other versions
+            ddt = new DynamoDSETranslatorJSONBlob(dseManager);
+        }
+        final DCProxyResource dcProxyResource = new DCProxyResource(dseManager, ddt);
         environment.jersey().register(dcProxyResource);
 
         //Dynamo

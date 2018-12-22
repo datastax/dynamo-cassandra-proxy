@@ -22,7 +22,7 @@ public class DCProxyConfiguration extends Configuration {
     @JsonProperty
     private String cqlPassword = "cassandra";
     @JsonProperty
-    private String keyspaceName = "dynamoKS";
+    private String keyspaceName = "dynamoks";
     @JsonProperty
     private String replicationStrategy = "{'class': 'SimpleStrategy', 'replication_factor': 1 }";
 
@@ -31,6 +31,7 @@ public class DCProxyConfiguration extends Configuration {
     private String dynamoRegion = "east-nyc-madeup";
     @JsonProperty
     private String dynamodbEndpoint = "http://localhost:8080";
+    private TranslatorType translatorImplementation = TranslatorType.JSON_BLOB;
 
     @JsonProperty
     public void setContactPoints(String[] contactPoints) {
@@ -110,5 +111,9 @@ public class DCProxyConfiguration extends Configuration {
     @JsonProperty
     public void setDynamodbEndpoint(String dynamodbEndpoint) {
         this.dynamodbEndpoint = dynamodbEndpoint;
+    }
+
+    public TranslatorType getTranslatorImplementation() {
+        return this.translatorImplementation;
     }
 }

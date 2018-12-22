@@ -7,19 +7,17 @@ package com.datastax.powertools.dcp.managed;
  */
 
 
+import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.dse.DseCluster;
 import com.datastax.driver.dse.DseSession;
-import com.datastax.driver.dse.graph.GraphOptions;
 import com.datastax.powertools.dcp.DCProxyConfiguration;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class DatastaxManager implements Managed {
     private final static Logger logger = LoggerFactory.getLogger(DatastaxManager.class);
@@ -27,13 +25,18 @@ public class DatastaxManager implements Managed {
     private int cqlPort = 9042;
     private String[] contactPoints = new String[]{"localhost"};
     private DseCluster cluster;
+
+    public DseSession getSession() {
+        return session;
+    }
+
     private DseSession session;
     private String username;
     private String password;
     private String keyspaceName;
     private DSEStmts.Prepared stmts;
     private String replicationStrategy;
-    private Set<String> tables;
+    private Map<String, TableDef> tableDefs;
 
     public String getComponentName() {
         return "dse";
@@ -62,18 +65,67 @@ public class DatastaxManager implements Managed {
         logger.info("Preparing statements for " + DatastaxManager.class.getSimpleName());
         stmts = new DSEStmts.Prepared(session, keyspaceName, replicationStrategy);
 
-        //TODO schema
-        ResultSet rows = session.execute(stmts.get_tables.bind());
+        refreshSchema();
+    }
 
-        tables = new HashSet<>();
+    public void refreshSchema() {
+
+        ResultSet rows = session.execute(stmts.get_columns.bind());
+
+        tableDefs = new HashMap<>();
         for (Row row: rows){
             String table = row.getString("table_name");
-            tables.add(table);
+            TableDef  tableRepresentation;
+
+            if (tableDefs.containsKey(table)) {
+                tableRepresentation = tableDefs.get(table);
+            }else {
+                tableRepresentation = new TableDef();
+                PreparedStatement jsonPutStatement = stmts.prepare(String.format("INSERT INTO %s.%s JSON ?", keyspaceName, table));
+                tableRepresentation.setJsonPutStatement(jsonPutStatement);
+            }
+
+            String kind = row.getString("kind");
+            String colName= row.getString("column_name");
+
+
+            if (kind.equals("partition_key")){
+                tableRepresentation.addPK(colName);
+                PreparedStatement jsonQueryStatement = stmts.prepare(String.format("SELECT * from %s.%s where %s = ?", keyspaceName, table, colName));
+                tableRepresentation.setJsonQueryStatement(jsonQueryStatement);
+            }else if (kind.equals("clustering")){
+                tableRepresentation.addClusteringColumn(colName);
+            }
+            if (tableDefs.containsKey(table)) {
+                tableDefs.replace(table, tableRepresentation);
+            }else{
+                tableDefs.put(table, tableRepresentation);
+            }
         }
     }
 
     public void stop() throws Exception {
         session.close();
         cluster.close();
+    }
+
+    public String getKeyspaceName() {
+        return keyspaceName;
+    }
+
+    public PreparedStatement getPutStatement(String tableName) {
+        return tableDefs.get(tableName).getJsonPutStatement();
+    }
+
+    public PreparedStatement getQueryStatement(String tableName) {
+        return tableDefs.get(tableName).getJsonQueryStatement();
+    }
+
+    public List<String> getPartitionKeys(String tableName) {
+        return tableDefs.get(tableName).getPartitionKeys();
+    }
+
+    public List<String> getClusteringColumns(String tableName) {
+        return tableDefs.get(tableName).getClusteringColumns();
     }
 }

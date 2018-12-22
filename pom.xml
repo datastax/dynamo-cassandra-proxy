@@ -24,6 +24,13 @@
             <artifactId>aws-java-sdk-dynamodb</artifactId>
             <version>1.11.438</version>
         </dependency>
+        <!--
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>DynamoDBLocal</artifactId>
+            <version>1.11.119</version>
+        </dependency>
+        -->
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -106,4 +113,11 @@
         </plugins>
     </build>
 
+    <repositories>
+        <repository>
+            <id>dynamodb-local</id>
+            <name>DynamoDB Local Release Repository</name>
+            <url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
+        </repository>
+    </repositories>
 </project>
