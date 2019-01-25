@@ -8,6 +8,7 @@ package com.datastax.powertools.dcp.api;
 
 
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class NicerKeySchemaElement extends KeySchemaElement {
@@ -39,4 +40,8 @@ public class NicerKeySchemaElement extends KeySchemaElement {
         return super.getKeyType();
     }
 
+    @JsonIgnore
+    public KeySchemaElement getAWSKeySchema() {
+        return new KeySchemaElement(getAttributeName(), getKeyType());
+    }
 }

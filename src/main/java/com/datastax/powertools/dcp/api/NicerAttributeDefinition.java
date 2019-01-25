@@ -8,6 +8,8 @@ package com.datastax.powertools.dcp.api;
 
 
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class NicerAttributeDefinition extends AttributeDefinition {
@@ -37,5 +39,10 @@ public class NicerAttributeDefinition extends AttributeDefinition {
     @Override
     public String getAttributeType() {
         return super.getAttributeType();
+    }
+
+    @JsonIgnore
+    public AttributeDefinition getAttributeDefinition(){
+        return new AttributeDefinition(getAttributeName(), getAttributeType());
     }
 }

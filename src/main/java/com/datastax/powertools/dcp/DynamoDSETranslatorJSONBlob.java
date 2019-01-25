@@ -7,9 +7,7 @@ package com.datastax.powertools.dcp;
  */
 
 
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import com.amazonaws.services.dynamodbv2.model.*;
 import com.datastax.driver.core.*;
 import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
@@ -26,8 +24,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.sql.JDBCType.ARRAY;
-
 public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     private final static Logger logger = LoggerFactory.getLogger(DynamoDSETranslatorJSONBlob.class);
     private final String keyspaceName;
@@ -42,6 +38,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
     @Override
     public QueryResult query(DynamoDBRequest payload) {
+        // TODO: we need a real grammar rather than this hacky json parsing
         Pattern pattern = Pattern.compile(".*(:\\S+)");
         logger.info("query against JSON table");
 
@@ -273,7 +270,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     @Override
-    public String createTable(DynamoDBRequest payload) {
+    public CreateTableResult createTable(DynamoDBRequest payload) {
         logger.info("creating JSON table");
 
         session = cacheAndOrGetCachedSession();
@@ -286,15 +283,31 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         String statement = String.format("CREATE TABLE IF NOT EXISTS %s.%s ( %s, PRIMARY KEY %s);\n", keyspace, table, columnPairs, primaryKey);
         ResultSet result = this.session.execute(statement);
         if (result.wasApplied()) {
+
             logger.info("created table " + table);
+
             datastaxManager.refreshSchema();
-            return "true";
+            TableDescription newTableDesc = this.getTableDescription(table, payload);
+            CreateTableResult createResult = (new CreateTableResult()).withTableDescription(newTableDesc);
+            return createResult;
         }
-        return "false";
+        return null;
+    }
+
+    private TableDescription getTableDescription(String tableName, DynamoDBRequest payload) {
+        TableDescription tableDescription = (new TableDescription())
+                .withTableName(tableName)
+                .withAttributeDefinitions(payload.getAWSAttributeDefinitions())
+                .withKeySchema(payload.getAWSKeySchema())
+                .withTableStatus(TableStatus.ACTIVE)
+                .withCreationDateTime(new Date())
+                .withTableArn(tableName);
+
+        return tableDescription;
     }
 
     @Override
-    public String putItem(DynamoDBRequest payload) {
+    public PutItemResult putItem(DynamoDBRequest payload) {
         logger.info("put item into JSON table");
         PreparedStatement jsonStatement = datastaxManager.getPutStatement(payload.getTableName());
         List<String> partionKeys = datastaxManager.getPartitionKeys(payload.getTableName());
@@ -312,9 +325,10 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         ResultSet result = session.execute(boundStatement);
 
         if (result.wasApplied()){
-            return "true";
+            PutItemResult pir = new PutItemResult();
+            return pir;
         }
-        else return "false";
+        else return null;
     }
 
     private DseSession cacheAndOrGetCachedSession() {

@@ -8,7 +8,6 @@ package com.datastax.powertools.dcp.resources;
 
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.datastax.powertools.dcp.managed.DynamoManager;
 import org.glassfish.jersey.server.ManagedAsync;
@@ -27,7 +26,7 @@ public class DynamoDBResource {
     private final AmazonDynamoDB ddb;
 
     public DynamoDBResource(DynamoManager ddbManager) {
-        this.ddb = ddbManager.createAndGetDdb();
+        this.ddb = ddbManager.createOrGetDDB();
     }
 
     @ManagedAsync
@@ -56,7 +55,7 @@ public class DynamoDBResource {
                 .withTableName(table_name);
         CreateTableResult response = ddb.createTable(request);
 
-        asyncResponse.resume(Response.ok().entity(response).build());
+        asyncResponse.resume(Response.ok(response).build());
     }
 
     private ScalarAttributeType getAttributeTypeFromString(String attributeTypeString) {

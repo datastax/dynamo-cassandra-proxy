@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,11 @@ public class DynamoDBRequest {
     @JsonProperty("AttributeDefinitions")
     public List<NicerAttributeDefinition> getAttributeDefinitions() {
         return attributeDefinitions;
+    }
+
+    public List<AttributeDefinition> getAWSAttributeDefinitions() {
+        List<AttributeDefinition> awsAttributeDefinitions = attributeDefinitions.stream().map((x) -> x.getAttributeDefinition()).collect(Collectors.toList());
+        return awsAttributeDefinitions;
     }
 
     @JsonProperty("AttributeDefinitions")
@@ -164,5 +170,10 @@ public class DynamoDBRequest {
     @JsonProperty("ExpressionAttributeValues")
     public void setExpressionAttributeValues(JsonNode expressionAttributeValues) {
         this.expressionAttributeValues = expressionAttributeValues;
+    }
+
+    public List<KeySchemaElement> getAWSKeySchema() {
+        List<KeySchemaElement> awsKeySchema = this.keySchema.stream().map(x -> x.getAWSKeySchema()).collect(Collectors.toList());
+        return awsKeySchema;
     }
 }

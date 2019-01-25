@@ -7,9 +7,6 @@ package com.datastax.powertools.dcp.managed;
  */
 
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
@@ -23,10 +20,18 @@ public class DynamoManager implements Managed {
     private AmazonDynamoDB ddb ;
     private String dynamodbEndpoint;
     private String signinRegion;
+    private String accessKey;
+    private String secretKey;
 
     public void configure(DCProxyConfiguration config) {
-        this.dynamodbEndpoint = config.getDynamodbEndpoint();
+        this.dynamodbEndpoint = config.getDsDynamodbEndpoint();
         this.signinRegion = config.getDynamoRegion();
+        this.accessKey = config.getDynamoAccessKey();
+        this.secretKey = config.getDynamoSecretKey();
+
+        Properties props = System.getProperties();
+        props.setProperty("aws.accessKeyId", accessKey);
+        props.setProperty("aws.secretKey", secretKey);
     }
 
 
@@ -37,14 +42,14 @@ public class DynamoManager implements Managed {
 
     }
 
-    public AmazonDynamoDB createAndGetDdb() {
-        Properties props = System.getProperties();
-        props.setProperty("aws.accessKeyId", "fakeID");
-        props.setProperty("aws.secretKey", "fakeKey");
-
-
+    public AmazonDynamoDB createOrGetDDB() {
         AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(dynamodbEndpoint, signinRegion);
-        ddb = AmazonDynamoDBClientBuilder.standard().withEndpointConfiguration(endpointConfiguration).build();
-        return ddb;
+        if (ddb != null){
+            return ddb;
+        }
+        else {
+            ddb = AmazonDynamoDBClientBuilder.standard().withEndpointConfiguration(endpointConfiguration).build();
+            return ddb;
+        }
     }
 }

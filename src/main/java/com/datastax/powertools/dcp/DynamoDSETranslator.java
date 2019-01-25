@@ -7,8 +7,9 @@ package com.datastax.powertools.dcp;
  */
 
 
+import com.amazonaws.services.dynamodbv2.model.CreateTableResult;
+import com.amazonaws.services.dynamodbv2.model.PutItemResult;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
 import com.datastax.powertools.dcp.managed.DatastaxManager;
 
@@ -21,8 +22,8 @@ public abstract class DynamoDSETranslator {
         this.keyspaceName = datastaxManager.getKeyspaceName();
     }
 
-    public abstract String createTable(DynamoDBRequest payload);
-    public abstract String putItem(DynamoDBRequest payload);
+    public abstract CreateTableResult createTable(DynamoDBRequest payload);
+    public abstract PutItemResult putItem(DynamoDBRequest payload);
     public abstract QueryResult query(DynamoDBRequest payload);
 
     protected String getKeyspaceName() {

@@ -29,9 +29,16 @@ public class DCProxyConfiguration extends Configuration {
     //Dynamo Stuff
     @JsonProperty
     private String dynamoRegion = "east-nyc-madeup";
+    private String dsDynamodbEndpoint = "http://localhost:8080";
     @JsonProperty
-    private String dynamodbEndpoint = "http://localhost:8080";
+    private String awsDynamodbEndpoint = "apigateway.us-east-2.amazonaws.com";
+
+    @JsonProperty
     private TranslatorType translatorImplementation = TranslatorType.JSON_BLOB;
+    @JsonProperty
+    private String dynamoAccessKey= "fake-key";
+    @JsonProperty
+    private String dynamoSecretKey= "fake-secret";
 
     @JsonProperty
     public void setContactPoints(String[] contactPoints) {
@@ -104,16 +111,36 @@ public class DCProxyConfiguration extends Configuration {
     }
 
     @JsonProperty
-    public String getDynamodbEndpoint() {
-        return dynamodbEndpoint;
+    public String getDsDynamodbEndpoint() {
+        return dsDynamodbEndpoint;
     }
 
     @JsonProperty
-    public void setDynamodbEndpoint(String dynamodbEndpoint) {
-        this.dynamodbEndpoint = dynamodbEndpoint;
+    public void setDsDynamodbEndpoint(String dsDynamodbEndpoint) {
+        this.dsDynamodbEndpoint = dsDynamodbEndpoint;
     }
 
     public TranslatorType getTranslatorImplementation() {
         return this.translatorImplementation;
+    }
+
+    @JsonProperty
+    public String getDynamoAccessKey() {
+        return dynamoAccessKey;
+    }
+
+    @JsonProperty
+    public String getDynamoSecretKey() {
+        return dynamoSecretKey;
+    }
+
+    @JsonProperty
+    public String getAwsDynamodbEndpoint() {
+        return awsDynamodbEndpoint;
+    }
+
+    @JsonProperty
+    public void setAwsDynamodbEndpoint(String awsDynamodbEndpoint) {
+        this.awsDynamodbEndpoint = awsDynamodbEndpoint;
     }
 }
