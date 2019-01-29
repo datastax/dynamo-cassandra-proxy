@@ -10,6 +10,7 @@ package com.datastax.powertools.dcp.managed;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.dse.DseCluster;
 import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.DCProxyConfiguration;
@@ -51,7 +52,7 @@ public class DatastaxManager implements Managed {
         replicationStrategy= config.getReplicationStrategy();
     }
 
-    public void start() throws Exception {
+    public void start() {
         DseCluster.Builder builder = DseCluster.builder().
                 addContactPoints(contactPoints).
                 withPort(cqlPort).
@@ -61,7 +62,15 @@ public class DatastaxManager implements Managed {
         password = null; // defensive
 
         cluster = builder.build();
-        session = this.cluster.connect();
+        try {
+            session = this.cluster.connect();
+        }catch (NoHostAvailableException e){
+            logger.warn("Cluster not found, standing up container.");
+            DockerHelper dh = new DockerHelper();
+            dh.startDSE();
+            cluster = builder.build();
+            session = this.cluster.connect();
+        }
         logger.info("Preparing statements for " + DatastaxManager.class.getSimpleName());
         stmts = new DSEStmts.Prepared(session, keyspaceName, replicationStrategy);
 

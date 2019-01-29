@@ -27,7 +27,6 @@
             <artifactId>aws-java-sdk-dynamodb</artifactId>
             <version>1.11.438</version>
         </dependency>
-
         <!--
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -66,6 +65,22 @@
             <artifactId>testng</artifactId>
             <version>7.0.0-beta1</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.0.56.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java</artifactId>
+            <version>3.0.14</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>netty.io</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
