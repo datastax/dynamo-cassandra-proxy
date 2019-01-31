@@ -27,19 +27,17 @@
             <artifactId>aws-java-sdk-dynamodb</artifactId>
             <version>1.11.438</version>
         </dependency>
-        <!--
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <artifactId>DynamoDBLocal</artifactId>
-            <version>1.11.119</version>
+            <artifactId>dynamodb-streams-kinesis-adapter</artifactId>
+            <version>1.4.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jackson-databind</artifactId>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-util</artifactId>
-            <version>9.4.14.v20181114</version>
-        </dependency>
-        -->
-
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>

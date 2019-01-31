@@ -1,13 +1,11 @@
 package com.datastax.powertools.dcp;
 
-import com.datastax.powertools.dcp.managed.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-
-import static org.testng.Assert.*;
 
 
 /*

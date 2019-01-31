@@ -11,7 +11,7 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import com.datastax.driver.core.*;
 import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
-import com.datastax.powertools.dcp.managed.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.*;

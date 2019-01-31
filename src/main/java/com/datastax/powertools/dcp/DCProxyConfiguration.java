@@ -31,7 +31,9 @@ public class DCProxyConfiguration extends Configuration {
     private String dynamoRegion = "east-nyc-madeup";
     private String dsDynamodbEndpoint = "http://localhost:8080";
     @JsonProperty
-    private String awsDynamodbEndpoint = "apigateway.us-east-2.amazonaws.com";
+    private String awsDynamodbEndpoint = "http://dynamodb.us-east-2.amazonaws.com";
+    @JsonProperty
+    private String streamsEndpoint =  "https://streams.dynamodb.us-east-2.amazonaws.com";;
 
     @JsonProperty
     private TranslatorType translatorImplementation = TranslatorType.JSON_BLOB;
@@ -142,5 +144,13 @@ public class DCProxyConfiguration extends Configuration {
     @JsonProperty
     public void setAwsDynamodbEndpoint(String awsDynamodbEndpoint) {
         this.awsDynamodbEndpoint = awsDynamodbEndpoint;
+    }
+
+    public String getStreamsEndpoint() {
+        return streamsEndpoint;
+    }
+
+    public void setStreamsEndpoint(String streamsEndpoint) {
+        this.streamsEndpoint = streamsEndpoint;
     }
 }

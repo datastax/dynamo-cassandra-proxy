@@ -1,8 +1,8 @@
 package com.datastax.powertools.dcp;
 
-import com.datastax.powertools.dcp.managed.DatastaxManager;
-import com.datastax.powertools.dcp.managed.DynamoManager;
-import com.datastax.powertools.dcp.managed.DynamoStreamsManager;
+import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dynamodb.DynamoManager;
+import com.datastax.powertools.dcp.managed.ddbstreams.DynamoStreamsManager;
 import com.datastax.powertools.dcp.resources.DCProxyResource;
 import com.datastax.powertools.dcp.resources.DynamoDBResource;
 import io.dropwizard.Application;
@@ -58,6 +58,8 @@ public class DCProxyApplication extends Application<DCProxyConfiguration> {
         DynamoStreamsManager dynamoStreamsManager = new DynamoStreamsManager(dynamoManager.createOrGetDDB());
         dynamoStreamsManager.configure(configuration);
         environment.lifecycle().manage(dynamoStreamsManager);
+
+        /*
         Thread thread = new Thread(){
             @Override
             public void run() {
@@ -67,6 +69,7 @@ public class DCProxyApplication extends Application<DCProxyConfiguration> {
         };
         thread.setDaemon(true);
         thread.start();
+        */
 
         //final DynamoStreamsResource streamsResource = new DynamoStreamsResource(dynamoStreamsManager);
         //environment.jersey().register(streamsResource);

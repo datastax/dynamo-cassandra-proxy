@@ -11,7 +11,7 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableResult;
 import com.amazonaws.services.dynamodbv2.model.PutItemResult;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
-import com.datastax.powertools.dcp.managed.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 
 public abstract class DynamoDSETranslator {
     private final DatastaxManager datastaxManager;

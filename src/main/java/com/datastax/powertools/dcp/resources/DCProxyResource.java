@@ -3,7 +3,7 @@ package com.datastax.powertools.dcp.resources;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.powertools.dcp.DynamoDSETranslator;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
-import com.datastax.powertools.dcp.managed.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

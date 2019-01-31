@@ -9,7 +9,7 @@ package com.datastax.powertools.dcp.resources;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.datastax.powertools.dcp.managed.DynamoManager;
+import com.datastax.powertools.dcp.managed.dynamodb.DynamoManager;
 import org.glassfish.jersey.server.ManagedAsync;
 
 import javax.ws.rs.*;

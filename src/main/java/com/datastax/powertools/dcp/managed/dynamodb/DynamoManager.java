@@ -1,4 +1,4 @@
-package com.datastax.powertools.dcp.managed;
+package com.datastax.powertools.dcp.managed.dynamodb;
 
 /*
  *
