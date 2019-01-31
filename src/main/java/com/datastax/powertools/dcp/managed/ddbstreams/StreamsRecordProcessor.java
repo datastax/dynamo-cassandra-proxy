@@ -58,10 +58,8 @@ public class StreamsRecordProcessor implements IRecordProcessor {
                         dynamoDBClient.putItem(putItemRequest);
                         break;
                     case "REMOVE":
-                        String id = streamRecord.getDynamodb().getKeys().get("Id").getN();
-                        Map<String, AttributeValue> key = new HashMap<String, AttributeValue>();
-                        key.put("Id", new AttributeValue().withN(id));
-                        DeleteItemRequest deleteItemRequest = new DeleteItemRequest().withTableName(tableName).withKey(key);
+                        Map<String, AttributeValue> keys = streamRecord.getDynamodb().getKeys();
+                        DeleteItemRequest deleteItemRequest = new DeleteItemRequest().withTableName(tableName).withKey(keys);
                         dynamoDBClient.deleteItem(deleteItemRequest);
                 }
             }

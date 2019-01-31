@@ -100,11 +100,26 @@ public class DatastaxManager implements Managed {
 
             if (kind.equals("partition_key")){
                 tableRepresentation.addPK(colName);
+
+                //TODO: handle compound partition keys
                 PreparedStatement jsonQueryStatement = stmts.prepare(String.format("SELECT * from %s.%s where %s = ?", keyspaceName, table, colName));
                 tableRepresentation.setJsonQueryStatement(jsonQueryStatement);
             }else if (kind.equals("clustering")){
                 tableRepresentation.addClusteringColumn(colName);
+
+                //TODO: handle compound clustering columns
+                PreparedStatement deleteStatement = stmts.prepare(
+                        String.format(
+                                "DELETE from %s.%s where %s = ? and %s = ?",
+                                keyspaceName,
+                                table,
+                                colName,
+                                //note this works because hash comes before sort in the alphabet
+                                tableRepresentation.getPartitionKeys().stream().findFirst().get()
+                                ));
+                tableRepresentation.setDeleteStatement(deleteStatement);
             }
+
             if (tableDefs.containsKey(table)) {
                 tableDefs.replace(table, tableRepresentation);
             }else{
@@ -124,6 +139,10 @@ public class DatastaxManager implements Managed {
 
     public PreparedStatement getPutStatement(String tableName) {
         return tableDefs.get(tableName).getJsonPutStatement();
+    }
+
+    public PreparedStatement getDeleteStatement(String tableName) {
+        return tableDefs.get(tableName).getDeleteStatement();
     }
 
     public PreparedStatement getQueryStatement(String tableName) {

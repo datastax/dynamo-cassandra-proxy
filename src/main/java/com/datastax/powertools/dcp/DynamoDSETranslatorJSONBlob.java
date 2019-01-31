@@ -8,6 +8,7 @@ package com.datastax.powertools.dcp;
 
 
 import com.amazonaws.services.dynamodbv2.model.*;
+import com.amazonaws.services.dynamodbv2.xspec.S;
 import com.datastax.driver.core.*;
 import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
@@ -28,12 +29,14 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     private final static Logger logger = LoggerFactory.getLogger(DynamoDSETranslatorJSONBlob.class);
     private final String keyspaceName;
     private final DatastaxManager datastaxManager;
+    private final ObjectMapper mapper;
     private DseSession session;
 
     public DynamoDSETranslatorJSONBlob(DatastaxManager datastaxManager) {
         super(datastaxManager);
         this.keyspaceName = super.getKeyspaceName();
         this.datastaxManager = datastaxManager;
+        mapper = new ObjectMapper();  //.setPropertyNamingStrategy(PropertyNamingStrategy.UPPER_CAMEL_CASE);
     }
 
     @Override
@@ -287,6 +290,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
             logger.info("created table " + table);
 
             datastaxManager.refreshSchema();
+
             TableDescription newTableDesc = this.getTableDescription(table, payload);
             CreateTableResult createResult = (new CreateTableResult()).withTableDescription(newTableDesc);
             return createResult;
@@ -304,6 +308,56 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
                 .withTableArn(tableName);
 
         return tableDescription;
+    }
+
+    @Override
+    public DeleteItemResult deleteItem(DeleteItemRequest dir) {
+        logger.info("delete item into JSON table");
+        PreparedStatement deleteStatement = datastaxManager.getDeleteStatement(dir.getTableName());
+
+        List<String> partitionKeys = datastaxManager.getPartitionKeys(dir.getTableName());
+        List<String> clusteringColumns = datastaxManager.getClusteringColumns(dir.getTableName());
+
+        Map<String, AttributeValue> keys = dir.getKey();
+
+        Object partitionKey = null;
+        Object clusteringKey = null;
+        for (Map.Entry<String, AttributeValue> pair : keys.entrySet()) {
+           if (partitionKeys.contains(pair.getKey())){
+               partitionKey = getAttributeObject(pair.getValue());
+           }else if (clusteringColumns.contains(pair.getKey())){
+               clusteringKey = getAttributeObject(pair.getValue());
+           }
+        }
+
+        BoundStatement boundStatement = deleteStatement.bind(clusteringKey, partitionKey);
+
+        session = cacheAndOrGetCachedSession();
+        ResultSet result = session.execute(boundStatement);
+
+        if (result.wasApplied()){
+            DeleteItemResult dres = new DeleteItemResult();
+            return dres;
+        }
+        else return null;
+
+    }
+
+    private Object getAttributeObject(AttributeValue value) {
+        //Note: only string, number, and binary are allowed for primary keys in dynamodb
+
+        if (value.getN() != null){
+            return Double.parseDouble(value.getN());
+        }
+        if (value.getB() != null){
+            return value.getB();
+        }
+        if (value.getS() != null){
+            return value.getS();
+        }else {
+            logger.error("type unsupported");
+            return null;
+        }
     }
 
     @Override

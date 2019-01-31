@@ -1,5 +1,6 @@
 package com.datastax.powertools.dcp.resources;
 
+import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.powertools.dcp.DynamoDSETranslator;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
@@ -43,6 +44,7 @@ public class DCProxyResource {
 
         //TODO: better type than Object?
         Object response = null;
+        boolean success= true;
         try {
             DynamoDBRequest dbr = mapper.readValue(payload, DynamoDBRequest.class);
 
@@ -51,10 +53,16 @@ public class DCProxyResource {
                 break;
                 case "PutItem": response = ddt.putItem(dbr);
                 break;
+                case "DeleteItem": {
+                    DeleteItemRequest dir = mapper.readValue(payload, DeleteItemRequest.class);
+                    response = ddt.deleteItem(dir);
+                }
+                    break;
                 case "Query": response = ddt.query(dbr);
                 break;
                 default: {
                     logger.error("query type not supported");
+                    success = false;
                 }
                 break;
             }
@@ -74,8 +82,14 @@ public class DCProxyResource {
                 e.printStackTrace();
             }
 
-            Response.ResponseBuilder responseBuilder = Response.ok(bytes);
-            Response httpResponse = responseBuilder.build();
+            Response httpResponse;
+            if (success) {
+                Response.ResponseBuilder responseBuilder = Response.ok(bytes);
+                httpResponse = responseBuilder.build();
+            }else{
+                Response.ResponseBuilder responseBuilder = Response.status(500);
+                httpResponse = responseBuilder.build();
+            }
             asyncResponse.resume(httpResponse);
         }
     }

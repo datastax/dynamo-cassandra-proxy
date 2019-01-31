@@ -17,6 +17,7 @@ public class TableDef {
     private List<String> clusteringColumns = new ArrayList<>();
     private PreparedStatement jsonPutStatement;
     private PreparedStatement jsonQueryStatement;
+    private PreparedStatement deleteStatement;
 
     public List<String> getPartitionKeys() {
         return partitionKeys;
@@ -56,5 +57,13 @@ public class TableDef {
 
     public void setJsonQueryStatement(PreparedStatement jsonQueryStatement) {
         this.jsonQueryStatement = jsonQueryStatement;
+    }
+
+    public PreparedStatement getDeleteStatement() {
+        return deleteStatement;
+    }
+
+    public void setDeleteStatement(PreparedStatement deleteStatement) {
+        this.deleteStatement = deleteStatement;
     }
 }
