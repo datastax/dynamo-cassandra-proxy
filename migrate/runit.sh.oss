@@ -1,0 +1,1 @@
+dse spark-submit --class com.datastax.powertools.migrate.dynamoDB ./target/dynamoDB-0.1.jar JPH_test last_name first_name 
