@@ -1,7 +1,7 @@
 package com.datastax.powertools.migrate
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import com.github.traviscrawford.spark.dynamodb._
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.cassandra._
 import org.apache.spark.sql.functions._
 import com.datastax.spark.connector._
@@ -37,23 +37,22 @@ object dynamoDB {
 
     def main(args: Array[String]) {
 
-    println(s"entered main")
+    log.info("entered main")
     var table_name = "na"
-    var hash_key = "na"
-    var sort_key = "na"
+
     if (args.length > 0) {
       table_name = args(0)
     } else {
-      println("not enough parameters for job $args.lenght")
+      log.info("not enough parameters for job $args.length")
     }
-    println(s"entered main, $table_name")
+    log.info("entered main " + table_name)
 
     val sparkJob = new SparkJob()
     try {
       sparkJob.runJob(table_name)
     } catch {
       case ex: Exception =>
-        println("error in main running spark job")
+        log.info("error in main running spark job")
     }
   }
 
@@ -71,13 +70,21 @@ object dynamoDB {
           .getOrCreate()
 
       println(s"before read dynamodb, $table_name")
-      val dynamoDF = sparkSession.read.dynamodb(table_name)
+      var dynamoDF  = sparkSession.emptyDataFrame
+      try {
+        dynamoDF = sparkSession.read.dynamodb(table_name)
+      } catch {
+        case ex: Exception =>
+          log.error("Did not find " + table_name + " in DynamoDB")
+          System.exit (2)
+      }
       dynamoDF.show(2)
       dynamoDF.printSchema()
       val keycols = getKeys(table_name)
       println(s"print key columns")
       keycols.foreach {println}
       //  hash_key is always first
+      // initialize sort key as it may be null
       var sort_key = "na"
       if (keycols.length > 1) sort_key = keycols(1).toLowerCase
       val hash_key = keycols(0).toLowerCase()
@@ -106,11 +113,21 @@ object dynamoDB {
       }
       writeDF.printSchema()
       println(s"before create cassandra table, $table_name, $hash_key, $sort_key")
-      writeDF.createCassandraTable("testks",table_name.toLowerCase(),partitionKeyColumns = Some(Seq(hash_key))
+      try {
+        writeDF.createCassandraTable("testks",table_name.toLowerCase(),partitionKeyColumns = Some(Seq(hash_key))
                 ,clusteringKeyColumns = Some(Seq(sort_key)))
-      println(s"before write cassandra, $table_name, $hash_key, $sort_key")
-      writeDF.write.cassandraFormat(table_name.toLowerCase, "testks").save()
-      println(s"after write cassandra, $table_name, $hash_key, $sort_key")
+      } catch {
+        case ex: Exception =>
+          log.info("Likely " + table_name + " already existed")
+      }
+      log.info(s"before write cassandra, $table_name, $hash_key, $sort_key")
+      try {
+      writeDF.write.cassandraFormat(table_name.toLowerCase, "testks").mode(SaveMode.Append).save()
+      } catch {
+        case ex: Exception =>
+          log.error("Error in write to " + table_name)
+      }
+      log.info(s"after write cassandra, $table_name, $hash_key, $sort_key")
     }
   }
 
