@@ -4,6 +4,7 @@ import com.github.traviscrawford.spark.dynamodb._
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.cassandra._
 import org.apache.spark.sql.functions._
+import com.datastax.spark.connector._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -79,7 +80,7 @@ object dynamoDB {
       //  hash_key is always first
       var sort_key = "na"
       if (keycols.length > 1) sort_key = keycols(1).toLowerCase
-      val hash_key = keycols(0)
+      val hash_key = keycols(0).toLowerCase()
       //  gets all columns labels into a list, this will be used for list of json columns
       val cols = dynamoDF.columns.toSeq
      // remove the hash_key and the sort_key as they should not be in json string
@@ -97,8 +98,16 @@ object dynamoDB {
       newDF.show(2)
       newDF.printSchema()
       //  Only need to write out the three columns
-      val writeDF = newDF.select(col(hash_key),col(sort_key),col("json_blob"))
+      var writeDF  = sparkSession.emptyDataFrame
+      if (keycols.length > 1) {
+        writeDF = newDF.select(col(hash_key), col(sort_key), col("json_blob"))
+      } else {
+        writeDF = newDF.select(col(hash_key),  col("json_blob"))
+      }
       writeDF.printSchema()
+      println(s"before create cassandra table, $table_name, $hash_key, $sort_key")
+      writeDF.createCassandraTable("testks",table_name.toLowerCase(),partitionKeyColumns = Some(Seq(hash_key))
+                ,clusteringKeyColumns = Some(Seq(sort_key)))
       println(s"before write cassandra, $table_name, $hash_key, $sort_key")
       writeDF.write.cassandraFormat(table_name.toLowerCase, "testks").save()
       println(s"after write cassandra, $table_name, $hash_key, $sort_key")
