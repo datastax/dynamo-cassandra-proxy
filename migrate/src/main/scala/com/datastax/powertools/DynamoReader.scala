@@ -1,32 +1,55 @@
 package com.datastax.powertools.migrate
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import com.github.traviscrawford.spark.dynamodb._
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.cassandra._
-import com.datastax.spark.connector._
+import org.apache.spark.sql.functions._
+import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 
 
 object dynamoDB {
 
+  private val log = LoggerFactory.getLogger(this.getClass)
+  def getKeys(table_name: String): List[String] = {
+    log.info("Getting description for %s\n\n", table_name)
+    val ddb = AmazonDynamoDBClientBuilder.defaultClient
+    var keyList = new ListBuffer[String]()
+    try {
+      val table_info = ddb.describeTable(table_name).getTable
+      val keyschema = table_info.getKeySchema()
+      log.info("Keys")
+      import scala.collection.JavaConversions._
+      for (k <- keyschema) {
+        log.info(k.getAttributeName + "(" + k.getKeyType + ")\n")
+        keyList += k.getAttributeName
+      }
+    } catch {
+      case NonFatal(err) =>
+        log.error(s"Failed getting table information for: ${table_name}", err)
+    }
+    log.info("\nDone!")
+    (keyList.toList)
+  }
 
-  def main(args: Array[String]) {
+    def main(args: Array[String]) {
 
     println(s"entered main")
     var table_name = "na"
     var hash_key = "na"
     var sort_key = "na"
-    if (args.length > 1) {
+    if (args.length > 0) {
       table_name = args(0)
-      hash_key = args(1).toLowerCase
-      if (args.length > 2) sort_key = args(2).toLowerCase
     } else {
-      println("not enough parameters for job")
+      println("not enough parameters for job $args.lenght")
     }
-    println(s"entered main, $table_name, $hash_key, $sort_key")
+    println(s"entered main, $table_name")
 
     val sparkJob = new SparkJob()
     try {
-      sparkJob.runJob(table_name, hash_key, sort_key)
+      sparkJob.runJob(table_name)
     } catch {
       case ex: Exception =>
         println("error in main running spark job")
@@ -38,7 +61,7 @@ object dynamoDB {
 
     println(s"before build spark session")
 
-    def runJob(table_name: String, hash_key: String, sort_key: String) = {
+    def runJob(table_name: String) = {
       val appName = "DynamoReader"
       val sparkSession =
         SparkSession.builder
@@ -46,14 +69,22 @@ object dynamoDB {
           .config("spark.cassandra.connection.host", "node0")
           .getOrCreate()
 
-      println(s"before read dynamodb, $table_name, $hash_key, $sort_key")
+      println(s"before read dynamodb, $table_name")
       val dynamoDF = sparkSession.read.dynamodb(table_name)
       dynamoDF.show(2)
       dynamoDF.printSchema()
+      val keycols = getKeys(table_name)
+      println(s"print key columns")
+      keycols.foreach {println}
+      //  hash_key is always first
+      var sort_key = "na"
+      if (keycols.length > 1) sort_key = keycols(1).toLowerCase
+      val hash_key = keycols(0)
       //  gets all columns labels into a list, this will be used for list of json columns
       val cols = dynamoDF.columns.toSeq
      // remove the hash_key and the sort_key as they should not be in json string
-      val othercols = cols.filterNot(x => x == hash_key).filterNot(x => x == sort_key)
+      val othercols = cols.filterNot(keycols.toSet)
+      // val othercols = cols.filterNot(x => x == hash_key).filterNot(x => x == sort_key)
       println(s"print columns for cols")
       cols.foreach {println}
       println(s"print columns for othercols")
