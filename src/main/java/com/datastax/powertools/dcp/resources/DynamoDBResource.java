@@ -82,11 +82,12 @@ public class DynamoDBResource {
     ) {
 
         List<String> favorites = Arrays.asList("puppies", "kittens", "other cute animals");
+
         Map<String, AttributeValue> item = new HashMap<>();
-        AttributeValue attributeValue = new AttributeValue(favorites);
+
         item.put(hashKey, new AttributeValue(hashValue));
         item.put(sortKey, new AttributeValue(sortValue));
-        item.put("favorites", attributeValue);
+        item.put("favorites", new AttributeValue(favorites));
         item.put("city", new AttributeValue("NYC"));
         PutItemRequest putItemRequest = new PutItemRequest(table_name, item);
 

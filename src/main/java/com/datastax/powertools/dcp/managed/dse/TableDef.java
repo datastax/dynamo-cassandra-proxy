@@ -16,8 +16,22 @@ public class TableDef {
     private List<String> partitionKeys = new ArrayList<>();
     private List<String> clusteringColumns = new ArrayList<>();
     private PreparedStatement jsonPutStatement;
-    private PreparedStatement jsonQueryStatement;
+    private PreparedStatement jsonQueryPartitionStatement;
+    private PreparedStatement jsonQueryRowStatement;
     private PreparedStatement deleteStatement;
+    private PreparedStatement queryRowStatement;
+
+    public PreparedStatement getQueryRowStatement() {
+        return queryRowStatement;
+    }
+
+    public PreparedStatement getJsonQueryRowStatement() {
+        return jsonQueryRowStatement;
+    }
+
+    public void setJsonQueryRowStatement(PreparedStatement jsonQueryRowStatement) {
+        this.jsonQueryRowStatement = jsonQueryRowStatement;
+    }
 
     public List<String> getPartitionKeys() {
         return partitionKeys;
@@ -51,12 +65,12 @@ public class TableDef {
         this.clusteringColumns.add(colName);
     }
 
-    public PreparedStatement getJsonQueryStatement() {
-        return jsonQueryStatement;
+    public PreparedStatement getJsonQueryPartitionStatement() {
+        return jsonQueryPartitionStatement;
     }
 
-    public void setJsonQueryStatement(PreparedStatement jsonQueryStatement) {
-        this.jsonQueryStatement = jsonQueryStatement;
+    public void setJsonQueryPartitionStatement(PreparedStatement jsonQueryPartitionStatement) {
+        this.jsonQueryPartitionStatement = jsonQueryPartitionStatement;
     }
 
     public PreparedStatement getDeleteStatement() {
@@ -65,5 +79,9 @@ public class TableDef {
 
     public void setDeleteStatement(PreparedStatement deleteStatement) {
         this.deleteStatement = deleteStatement;
+    }
+
+    public void setQueryRowStatement(PreparedStatement queryRowStatement) {
+        this.queryRowStatement = queryRowStatement;
     }
 }

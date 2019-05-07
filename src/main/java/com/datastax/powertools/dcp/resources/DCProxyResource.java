@@ -1,9 +1,12 @@
 package com.datastax.powertools.dcp.resources;
 
+import com.amazonaws.AmazonWebServiceResult;
 import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest;
+import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.powertools.dcp.DynamoDSETranslator;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
+import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -16,7 +19,10 @@ import org.slf4j.LoggerFactory;
 import javax.ws.rs.*;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
-import javax.ws.rs.core.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 
 @Path("/")
@@ -43,8 +49,8 @@ public class DCProxyResource {
         target = target.split("\\.")[1];
 
         //TODO: better type than Object?
-        Object response = null;
-        boolean success= true;
+        //AmazonWebServiceResult response = null;
+        DynamoDBResponse response = null;
         try {
             DynamoDBRequest dbr = mapper.readValue(payload, DynamoDBRequest.class);
 
@@ -52,6 +58,11 @@ public class DCProxyResource {
                 case "CreateTable": response = ddt.createTable(dbr);
                 break;
                 case "PutItem": response = ddt.putItem(dbr);
+                break;
+                case "GetItem": {
+                    GetItemRequest gir = mapper.readValue(payload, GetItemRequest.class);
+                    response = ddt.getItem(gir);
+                }
                 break;
                 case "DeleteItem": {
                     DeleteItemRequest dir = mapper.readValue(payload, DeleteItemRequest.class);
@@ -62,7 +73,8 @@ public class DCProxyResource {
                 break;
                 default: {
                     logger.error("query type not supported");
-                    success = false;
+                    response = new DynamoDBResponse(new AmazonWebServiceResult(), 400);
+                    response.setError("query type not supported");
                 }
                 break;
             }
@@ -81,16 +93,14 @@ public class DCProxyResource {
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
-
-            Response httpResponse;
-            if (success) {
-                Response.ResponseBuilder responseBuilder = Response.ok(bytes);
+            if (response.getStatusCode() == 200) {
+                Response httpResponse;
+                Response.ResponseBuilder responseBuilder = Response.ok(bytes).status(response.getStatusCode());
                 httpResponse = responseBuilder.build();
+                asyncResponse.resume(httpResponse);
             }else{
-                Response.ResponseBuilder responseBuilder = Response.status(500);
-                httpResponse = responseBuilder.build();
+                throw new WebApplicationException(response.getError(), response.getStatusCode());
             }
-            asyncResponse.resume(httpResponse);
         }
     }
 }

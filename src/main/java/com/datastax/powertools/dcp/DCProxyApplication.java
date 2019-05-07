@@ -1,8 +1,8 @@
 package com.datastax.powertools.dcp;
 
+import com.datastax.powertools.dcp.managed.ddbstreams.DynamoStreamsManager;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.datastax.powertools.dcp.managed.dynamodb.DynamoManager;
-import com.datastax.powertools.dcp.managed.ddbstreams.DynamoStreamsManager;
 import com.datastax.powertools.dcp.resources.DCProxyResource;
 import com.datastax.powertools.dcp.resources.DynamoDBResource;
 import io.dropwizard.Application;

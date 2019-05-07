@@ -103,7 +103,7 @@ public class DatastaxManager implements Managed {
 
                 //TODO: handle compound partition keys
                 PreparedStatement jsonQueryStatement = stmts.prepare(String.format("SELECT * from %s.%s where %s = ?", keyspaceName, table, colName));
-                tableRepresentation.setJsonQueryStatement(jsonQueryStatement);
+                tableRepresentation.setJsonQueryPartitionStatement(jsonQueryStatement);
             }else if (kind.equals("clustering")){
                 tableRepresentation.addClusteringColumn(colName);
 
@@ -118,6 +118,17 @@ public class DatastaxManager implements Managed {
                                 tableRepresentation.getPartitionKeys().stream().findFirst().get()
                                 ));
                 tableRepresentation.setDeleteStatement(deleteStatement);
+
+                PreparedStatement queryRowStatement = stmts.prepare(
+                        String.format(
+                                "select * from %s.%s where %s = ? and %s = ?",
+                                keyspaceName,
+                                table,
+                                colName,
+                                //note this works because hash comes before sort in the alphabet
+                                tableRepresentation.getPartitionKeys().stream().findFirst().get()
+                                ));
+                tableRepresentation.setQueryRowStatement(queryRowStatement);
             }
 
             if (tableDefs.containsKey(table)) {
@@ -138,6 +149,11 @@ public class DatastaxManager implements Managed {
     }
 
     public PreparedStatement getPutStatement(String tableName) {
+        TableDef tableDef = tableDefs.get(tableName);
+        if (tableDef == null){
+            logger.error(String.format("Table %s does not exist", tableName));
+            return null;
+        }
         return tableDefs.get(tableName).getJsonPutStatement();
     }
 
@@ -146,7 +162,11 @@ public class DatastaxManager implements Managed {
     }
 
     public PreparedStatement getQueryStatement(String tableName) {
-        return tableDefs.get(tableName).getJsonQueryStatement();
+        return tableDefs.get(tableName).getJsonQueryPartitionStatement();
+    }
+
+    public PreparedStatement getQueryRowStatement(String tableName) {
+        return tableDefs.get(tableName).getQueryRowStatement();
     }
 
     public List<String> getPartitionKeys(String tableName) {

@@ -7,7 +7,6 @@ package com.datastax.powertools.dcp.api;
  */
 
 
-import com.amazonaws.services.dynamodbv2.document.KeyConditions;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
@@ -16,7 +15,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -62,6 +60,18 @@ public class DynamoDBRequest {
     public List<NicerAttributeDefinition> getAttributeDefinitions() {
         return attributeDefinitions;
     }
+
+    /*
+    public Map<String, AttributeValue> getAttributeMap() {
+        Map<String, AttributeValue> attributeMap = new HashMap<>();
+        for (NicerAttributeDefinition attributeDefinition : attributeDefinitions) {
+            String key = attributeDefinition.getAttributeName();
+            AttributeDefinition value = attributeDefinition.getAttributeDefinition();
+            attributeMap.put(key, value);
+        }
+        return attributeMap;
+    }
+    */
 
     public List<AttributeDefinition> getAWSAttributeDefinitions() {
         List<AttributeDefinition> awsAttributeDefinitions = attributeDefinitions.stream().map((x) -> x.getAttributeDefinition()).collect(Collectors.toList());

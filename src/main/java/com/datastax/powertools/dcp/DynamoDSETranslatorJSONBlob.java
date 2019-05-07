@@ -8,14 +8,17 @@ package com.datastax.powertools.dcp;
 
 
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.amazonaws.services.dynamodbv2.xspec.S;
 import com.datastax.driver.core.*;
 import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
+import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.*;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +43,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     @Override
-    public QueryResult query(DynamoDBRequest payload) {
+    public DynamoDBResponse query(DynamoDBRequest payload) {
         // TODO: we need a real grammar rather than this hacky json parsing
         Pattern pattern = Pattern.compile(".*(:\\S+)");
         logger.info("query against JSON table");
@@ -74,7 +77,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
                 }
                 QueryResult queryResult = new QueryResult();
                 queryResult.setItems(items);
-                return queryResult;
+                return new DynamoDBResponse(queryResult, 200);
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -273,7 +276,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     @Override
-    public CreateTableResult createTable(DynamoDBRequest payload) {
+    public DynamoDBResponse createTable(DynamoDBRequest payload) {
         logger.info("creating JSON table");
 
         session = cacheAndOrGetCachedSession();
@@ -293,7 +296,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
             TableDescription newTableDesc = this.getTableDescription(table, payload);
             CreateTableResult createResult = (new CreateTableResult()).withTableDescription(newTableDesc);
-            return createResult;
+            return new DynamoDBResponse(createResult, 200);
         }
         return null;
     }
@@ -311,7 +314,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     @Override
-    public DeleteItemResult deleteItem(DeleteItemRequest dir) {
+    public DynamoDBResponse deleteItem(DeleteItemRequest dir) {
         logger.info("delete item into JSON table");
         PreparedStatement deleteStatement = datastaxManager.getDeleteStatement(dir.getTableName());
 
@@ -337,7 +340,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
         if (result.wasApplied()){
             DeleteItemResult dres = new DeleteItemResult();
-            return dres;
+            return new DynamoDBResponse(dres, 200);
         }
         else return null;
 
@@ -361,9 +364,17 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     @Override
-    public PutItemResult putItem(DynamoDBRequest payload) {
+    public DynamoDBResponse putItem(DynamoDBRequest payload) {
+        PutItemResult pir = new PutItemResult();
         logger.info("put item into JSON table");
         PreparedStatement jsonStatement = datastaxManager.getPutStatement(payload.getTableName());
+        if (jsonStatement == null){
+            String msg= String.format("Requested resource not found: Table: %s not found",payload.getTableName());
+            DynamoDBResponse ddbResponse = new DynamoDBResponse(pir, 400);
+            ddbResponse.setError(msg);
+            logger.error(msg);
+            return ddbResponse;
+        }
         List<String> partionKeys = datastaxManager.getPartitionKeys(payload.getTableName());
         List<String> clusteringColumns = datastaxManager.getClusteringColumns(payload.getTableName());
 
@@ -376,13 +387,68 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         BoundStatement boundStatement = jsonStatement.bind(jsonColumns);
 
         session = cacheAndOrGetCachedSession();
+        try {
+            ResultSet result = session.execute(boundStatement);
+            if (result.wasApplied()){
+                //PutItemResult pir = new PutItemResult().withAttributes(payload.getAttributeDefinitions());
+                DynamoDBResponse ddbResponse = new DynamoDBResponse(pir, 200);
+                return ddbResponse;
+            }
+            else {
+                DynamoDBResponse ddbResponse = new DynamoDBResponse(pir, 400);
+                String msg = String.format("PutItem not applied",payload.getTableName());
+                ddbResponse.setError(msg);
+                return ddbResponse;
+            }
+        }catch (Exception e){
+            DynamoDBResponse ddbResponse = new DynamoDBResponse(pir, 400);
+            String msg= String.format("PutItem write failed with error: %s",e.getMessage());
+            ddbResponse.setError(msg);
+            return ddbResponse;
+        }
+    }
+
+    @Override
+    public DynamoDBResponse getItem(GetItemRequest payload) {
+        logger.info("get item from JSON table");
+
+        String tableName = payload.getTableName();
+
+        PreparedStatement selectStatement = datastaxManager.getQueryRowStatement(tableName);
+
+        List<String> partitionKeys = datastaxManager.getPartitionKeys(tableName);
+        List<String> clusteringColumns = datastaxManager.getClusteringColumns(tableName);
+
+        Map<String, AttributeValue> keys = payload.getKey();
+
+        Object partitionKey = null;
+        Object clusteringKey = null;
+        for (Map.Entry<String, AttributeValue> pair : keys.entrySet()) {
+           if (partitionKeys.contains(pair.getKey())){
+               partitionKey = getAttributeObject(pair.getValue());
+           }else if (clusteringColumns.contains(pair.getKey())){
+               clusteringKey = getAttributeObject(pair.getValue());
+           }
+        }
+
+        BoundStatement boundStatement = selectStatement.bind(clusteringKey, partitionKey);
+
+        session = cacheAndOrGetCachedSession();
         ResultSet result = session.execute(boundStatement);
 
-        if (result.wasApplied()){
-            PutItemResult pir = new PutItemResult();
-            return pir;
+        GetItemResult gir = new GetItemResult();
+        Map<String, AttributeValue> item = new HashMap<>();
+        ColumnDefinitions colDef = result.getColumnDefinitions();
+
+        for (Row row : result) {
+            for (ColumnDefinitions.Definition definition : colDef) {
+                AttributeValue av = colToAttributeValue(definition, row);
+                item.put(definition.getName(), av);
+            }
         }
-        else return null;
+
+        gir.withItem(item);
+        return new DynamoDBResponse(gir, 200);
     }
 
     private DseSession cacheAndOrGetCachedSession() {
