@@ -1,0 +1,1 @@
+~/datastax/spark-2.4.0-bin-hadoop2.7/bin/spark-submit --class com.github.traviscrawford.spark.dynamodb.DynamoBackupJob --packages com.github.traviscrawford:spark-dynamodb:0.0.14-SNAPSHOT ./target/dynamoDB-0.1.jar  -table JPH_test -output JPH_test.out -overwrite true
