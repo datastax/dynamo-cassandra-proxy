@@ -1,5 +1,6 @@
 package com.datastax.powertools.migrate
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
+import com.datastax.driver.core.exceptions.AlreadyExistsException
 import com.github.traviscrawford.spark.dynamodb._
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.cassandra._
@@ -59,7 +60,7 @@ object dynamoDB {
 
   class SparkJob extends Serializable {
 
-    println(s"before build spark session")
+    log.info("before build spark session")
 
     def runJob(table_name: String) = {
       val appName = "DynamoReader"
@@ -69,7 +70,7 @@ object dynamoDB {
           .config("spark.cassandra.connection.host", "node0")
           .getOrCreate()
 
-      println(s"before read dynamodb, $table_name")
+      log.info(s"before read dynamodb " + table_name)
       var dynamoDF  = sparkSession.emptyDataFrame
       try {
         dynamoDF = sparkSession.read.dynamodb(table_name)
@@ -78,8 +79,9 @@ object dynamoDB {
           log.error("Did not find " + table_name + " in DynamoDB")
           System.exit (2)
       }
-      dynamoDF.show(2)
       dynamoDF.printSchema()
+//	 this caused breakage due to type conversions
+//      dynamoDF.show(5)
       val keycols = getKeys(table_name)
       println(s"print key columns")
       keycols.foreach {println}
@@ -102,7 +104,8 @@ object dynamoDB {
       //  add the structure column and the json_blob column
       val newDF = dynamoDF.withColumn("structure",expr(expressString))
         .withColumn("json_blob", expr("to_json(structure)"))
-      newDF.show(2)
+      //  this show causes breakage on long to string conversion
+      // newDF.show(2)
       newDF.printSchema()
       //  Only need to write out the three columns
       var writeDF  = sparkSession.emptyDataFrame
@@ -114,11 +117,16 @@ object dynamoDB {
       writeDF.printSchema()
       println(s"before create cassandra table, $table_name, $hash_key, $sort_key")
       try {
-        writeDF.createCassandraTable("testks",table_name.toLowerCase(),partitionKeyColumns = Some(Seq(hash_key))
+        if (keycols.length > 1) {
+            writeDF.createCassandraTable("testks",table_name.toLowerCase(),partitionKeyColumns = Some(Seq(hash_key))
                 ,clusteringKeyColumns = Some(Seq(sort_key)))
+        } else {
+          writeDF.createCassandraTable("testks",table_name.toLowerCase(),partitionKeyColumns = Some(Seq(hash_key))
+            )
+        }
       } catch {
-        case ex: Exception =>
-          log.info("Likely " + table_name + " already existed")
+        case ex: AlreadyExistsException => log.info(table_name + " already existed so did not recreate");
+        case ex: Exception => ex.printStackTrace();
       }
       log.info(s"before write cassandra, $table_name, $hash_key, $sort_key")
       try {
@@ -126,6 +134,7 @@ object dynamoDB {
       } catch {
         case ex: Exception =>
           log.error("Error in write to " + table_name)
+          ex.printStackTrace()
       }
       log.info(s"after write cassandra, $table_name, $hash_key, $sort_key")
     }
