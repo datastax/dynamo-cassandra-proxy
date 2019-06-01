@@ -41,6 +41,7 @@ public class DCProxyConfiguration extends Configuration {
     private String dynamoAccessKey= "fake-key";
     @JsonProperty
     private String dynamoSecretKey= "fake-secret";
+    private boolean streamsEnabled;
 
     @JsonProperty
     public void setContactPoints(String[] contactPoints) {
@@ -152,5 +153,9 @@ public class DCProxyConfiguration extends Configuration {
 
     public void setStreamsEndpoint(String streamsEndpoint) {
         this.streamsEndpoint = streamsEndpoint;
+    }
+
+    public boolean isStreamsEnabled() {
+        return streamsEnabled;
     }
 }

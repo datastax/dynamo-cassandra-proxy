@@ -55,9 +55,11 @@ public class DCProxyApplication extends Application<DCProxyConfiguration> {
 
 
         //DynamoDBStreams
-        DynamoStreamsManager dynamoStreamsManager = new DynamoStreamsManager(dynamoManager.createOrGetDDB());
-        dynamoStreamsManager.configure(configuration);
-        environment.lifecycle().manage(dynamoStreamsManager);
+        if(configuration.isStreamsEnabled()){
+            DynamoStreamsManager dynamoStreamsManager = new DynamoStreamsManager(dynamoManager.createOrGetDDB());
+            dynamoStreamsManager.configure(configuration);
+            environment.lifecycle().manage(dynamoStreamsManager);
+        }
 
         /*
         Thread thread = new Thread(){
