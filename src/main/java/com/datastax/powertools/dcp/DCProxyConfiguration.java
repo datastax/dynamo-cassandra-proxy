@@ -16,7 +16,7 @@ public class DCProxyConfiguration extends Configuration {
     @JsonProperty
     private int cqlPort = 9042;
     @JsonProperty
-    private String[] contactPoints = {"localhost"};
+    private String contactPoints = "localhost";
     @JsonProperty
     private String cqlUserName = "cassandra";
     @JsonProperty
@@ -44,12 +44,12 @@ public class DCProxyConfiguration extends Configuration {
     private boolean streamsEnabled;
 
     @JsonProperty
-    public void setContactPoints(String[] contactPoints) {
+    public void setContactPoints(String contactPoints) {
         this.contactPoints = contactPoints;
     }
 
     @JsonProperty
-    public String[] getContactPoints() {
+    public String getContactPoints() {
         return contactPoints;
     }
 

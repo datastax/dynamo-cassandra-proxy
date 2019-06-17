@@ -24,7 +24,7 @@ public class DatastaxManager implements Managed {
     private final static Logger logger = LoggerFactory.getLogger(DatastaxManager.class);
 
     private int cqlPort = 9042;
-    private String[] contactPoints = new String[]{"localhost"};
+    private String contactPoints = new String();
     private DseCluster cluster;
 
     public DseSession getSession() {
@@ -54,7 +54,7 @@ public class DatastaxManager implements Managed {
 
     public void start() {
         DseCluster.Builder builder = DseCluster.builder().
-                addContactPoints(contactPoints).
+                addContactPoints(contactPoints.split(",")).
                 withPort(cqlPort).
                 withCredentials(username, password).
                 withoutJMXReporting();
