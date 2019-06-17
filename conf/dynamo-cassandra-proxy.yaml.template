@@ -2,3 +2,5 @@ dynamoRegion: us-east-2
 dynamoAccessKey: <KEY>
 dynamoSecretKey: <SECRET>
 awsDynamodbEndpoint: apigateway.us-east-2.amazonaws.com
+streamsEnabled: false
+contactPoints: localhost
