@@ -46,7 +46,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     public DynamoDBResponse query(DynamoDBRequest payload) {
         // TODO: we need a real grammar rather than this hacky json parsing
         Pattern pattern = Pattern.compile(".*(:\\S+)");
-        logger.info("query against JSON table");
+        logger.debug("query against JSON table");
 
         session = cacheAndOrGetCachedSession();
 
@@ -315,7 +315,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
     @Override
     public DynamoDBResponse deleteItem(DeleteItemRequest dir) {
-        logger.info("delete item into JSON table");
+        logger.debug("delete item into JSON table");
         PreparedStatement deleteStatement = datastaxManager.getDeleteStatement(dir.getTableName());
 
         List<String> partitionKeys = datastaxManager.getPartitionKeys(dir.getTableName());
@@ -366,7 +366,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     @Override
     public DynamoDBResponse putItem(DynamoDBRequest payload) {
         PutItemResult pir = new PutItemResult();
-        logger.info("put item into JSON table");
+        logger.debug("put item into JSON table");
         PreparedStatement jsonStatement = datastaxManager.getPutStatement(payload.getTableName());
         if (jsonStatement == null){
             String msg= String.format("Requested resource not found: Table: %s not found",payload.getTableName());
@@ -410,7 +410,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
     @Override
     public DynamoDBResponse getItem(GetItemRequest payload) {
-        logger.info("get item from JSON table");
+        logger.debug("get item from JSON table");
 
         String tableName = payload.getTableName();
 
