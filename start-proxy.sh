@@ -1,5 +1,7 @@
 /bin/bash
 
+set -x
+
 contactPoints="localhost"
 
 if [ -z "$1" ]; then
