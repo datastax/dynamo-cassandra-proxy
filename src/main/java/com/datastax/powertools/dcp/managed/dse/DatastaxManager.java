@@ -7,6 +7,7 @@ package com.datastax.powertools.dcp.managed.dse;
  */
 
 
+import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -18,7 +19,8 @@ import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DatastaxManager implements Managed {
     private final static Logger logger = LoggerFactory.getLogger(DatastaxManager.class);
@@ -96,16 +98,25 @@ public class DatastaxManager implements Managed {
 
             String kind = row.getString("kind");
             String colName= row.getString("column_name");
+            DataType.Name type = DataType.Name.valueOf(row.getString("type").toUpperCase());
 
 
             if (kind.equals("partition_key")){
-                tableRepresentation.addPK(colName);
+                tableRepresentation.addPK(colName, type);
 
                 //TODO: handle compound partition keys
                 PreparedStatement jsonQueryStatement = stmts.prepare(String.format("SELECT * from %s.%s where %s = ?", keyspaceName, table, colName));
                 tableRepresentation.setJsonQueryPartitionStatement(jsonQueryStatement);
             }else if (kind.equals("clustering")){
-                tableRepresentation.addClusteringColumn(colName);
+                tableRepresentation.addClusteringColumn(colName, type);
+
+                Map<String, DataType.Name> partitionKeyMap = tableRepresentation.getPartitionKeyMap();
+                String pk = "";
+                //note this works because hash comes before sort in the alphabet
+                for (String partitionKey : partitionKeyMap.keySet()) {
+                    pk = partitionKey;
+                    continue;
+                }
 
                 //TODO: handle compound clustering columns
                 PreparedStatement deleteStatement = stmts.prepare(
@@ -114,8 +125,7 @@ public class DatastaxManager implements Managed {
                                 keyspaceName,
                                 table,
                                 colName,
-                                //note this works because hash comes before sort in the alphabet
-                                tableRepresentation.getPartitionKeys().stream().findFirst().get()
+                                pk
                                 ));
                 tableRepresentation.setDeleteStatement(deleteStatement);
 
@@ -125,8 +135,7 @@ public class DatastaxManager implements Managed {
                                 keyspaceName,
                                 table,
                                 colName,
-                                //note this works because hash comes before sort in the alphabet
-                                tableRepresentation.getPartitionKeys().stream().findFirst().get()
+                                pk
                                 ));
                 tableRepresentation.setQueryRowStatement(queryRowStatement);
             }
@@ -169,11 +178,19 @@ public class DatastaxManager implements Managed {
         return tableDefs.get(tableName).getQueryRowStatement();
     }
 
-    public List<String> getPartitionKeys(String tableName) {
-        return tableDefs.get(tableName).getPartitionKeys();
+    public Map<String, DataType.Name> getPartitionKeys(String tableName) {
+        return tableDefs.get(tableName).getPartitionKeyMap();
     }
 
-    public List<String> getClusteringColumns(String tableName) {
-        return tableDefs.get(tableName).getClusteringColumns();
+    public Map<String, DataType.Name> getClusteringColumns(String tableName) {
+        return tableDefs.get(tableName).getClusteringColumnMap();
+    }
+
+    public boolean tableInSchema(String tableName) {
+        return tableDefs.containsKey(tableName);
+    }
+
+    public TableDef getTableDef(String tableName) {
+        return tableDefs.get(tableName);
     }
 }

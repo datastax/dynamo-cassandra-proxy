@@ -57,6 +57,8 @@ public class DCProxyResource {
             switch (target){
                 case "CreateTable": response = ddt.createTable(dbr);
                 break;
+                case "DescribeTable": response = ddt.describeTable(dbr);
+                break;
                 case "PutItem": response = ddt.putItem(dbr);
                 break;
                 case "GetItem": {
@@ -89,7 +91,7 @@ public class DCProxyResource {
 
             byte[] bytes = null;
             try {
-                bytes = mapper.writeValueAsBytes(response);
+                bytes = mapper.writeValueAsBytes(response.getResult());
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }

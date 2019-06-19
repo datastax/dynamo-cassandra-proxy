@@ -13,6 +13,7 @@ import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.TableDef;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -22,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -165,11 +167,14 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     private AttributeValue colToAttributeValue(ColumnDefinitions.Definition colDef, Row row) {
-        AttributeValue av = new AttributeValue();
-
         DataType.Name type = colDef.getType().getName();
         String name = colDef.getName();
-        switch (type) {
+        AttributeValue av = rowToAV(name, type, row);
+        return av;
+    }
+    private AttributeValue rowToAV(String name, DataType.Name type, Row row) {
+        AttributeValue av = new AttributeValue();
+                switch (type) {
             case CUSTOM:
                 break;
             case ASCII:
@@ -233,6 +238,78 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
             return null;
         }
         return av;
+    }
+
+    private AttributeDefinition cqlToAD(String name, DataType.Name type) {
+        if (name == null | type == null ){
+            throw new WebApplicationException("Invalid table");
+        }
+        AttributeDefinition ad = new AttributeDefinition();
+        ad.setAttributeName(name);
+                switch (type) {
+            case CUSTOM:
+                break;
+            case ASCII:
+                break;
+            case BIGINT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case BLOB: ad.setAttributeType(ScalarAttributeType.B);
+                break;
+            case BOOLEAN: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case COUNTER:
+                break;
+            case DECIMAL:
+                break;
+            case DOUBLE: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case FLOAT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case INT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case TEXT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case TIMESTAMP: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case UUID:
+                break;
+            case VARCHAR: ad.setAttributeType(ScalarAttributeType.S);
+                break;
+            case VARINT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case TIMEUUID: ad.setAttributeType(ScalarAttributeType.S);
+                break;
+            case INET:
+                break;
+            case DATE: ad.setAttributeType(ScalarAttributeType.S);
+                break;
+            case TIME: ad.setAttributeType(ScalarAttributeType.S);
+                break;
+            case SMALLINT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case TINYINT: ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case DURATION:
+                break;
+            case LIST:
+                break;
+            case MAP:
+                break;
+            case SET:
+                break;
+            case UDT:
+                break;
+            case TUPLE:
+                break;
+            default:
+                logger.error("Type not supported");
+                return null;
+        }
+        if (ad == null){
+            logger.error("Type not supported");
+            return null;
+        }
+        return ad;
     }
 
     private Object getKeyFromExpression(String keyAlias, ObjectNode expressionAttributeValues) throws Exception {
@@ -301,6 +378,55 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         return null;
     }
 
+    @Override
+    public DynamoDBResponse describeTable(DynamoDBRequest payload) {
+        String tableName= payload.getTableName();
+        if (datastaxManager.tableInSchema(tableName)){
+            TableDef dseJsonTableDef = datastaxManager.getTableDef(tableName);
+
+            Map<String, DataType.Name> hashKeyMap = dseJsonTableDef.getPartitionKeyMap();
+            Map<String, DataType.Name> sortKeyMap = dseJsonTableDef.getClusteringColumnMap();
+
+            String sortKey = null;
+            DataType.Name sortKeyType = null;
+            for (Map.Entry<String, DataType.Name> sortKeyKV : sortKeyMap.entrySet()) {
+                sortKey = sortKeyKV.getKey();
+                sortKeyType = sortKeyKV.getValue();
+            }
+            String hashKey = null;
+            DataType.Name hashKeyType = null;
+            for (Map.Entry<String, DataType.Name> hashKeyKV : hashKeyMap.entrySet()) {
+                hashKey = hashKeyKV.getKey();
+                hashKeyType = hashKeyKV.getValue();
+            }
+
+
+            TableDescription tableDescription = new TableDescription()
+                    .withTableName(tableName)
+                    .withAttributeDefinitions(
+                            cqlToAD(hashKey, hashKeyType),
+                            cqlToAD(sortKey, sortKeyType)
+                    )
+                    .withKeySchema(
+                            new KeySchemaElement(hashKey, KeyType.HASH),
+                            new KeySchemaElement(sortKey, KeyType.RANGE))
+                    .withTableStatus(TableStatus.ACTIVE)
+                    .withCreationDateTime(new Date())
+                    .withTableArn(tableName);
+
+            DescribeTableResult dtr = new DescribeTableResult().withTable(tableDescription);
+
+            DynamoDBResponse ddbr = new DynamoDBResponse(dtr, 200);
+
+            return ddbr;
+
+        }else{
+            DynamoDBResponse ddbr = new DynamoDBResponse(null, 400);
+            ddbr.setError("Table not found");
+            return ddbr;
+        }
+    }
+
     private TableDescription getTableDescription(String tableName, DynamoDBRequest payload) {
         TableDescription tableDescription = (new TableDescription())
                 .withTableName(tableName)
@@ -316,19 +442,21 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     @Override
     public DynamoDBResponse deleteItem(DeleteItemRequest dir) {
         logger.debug("delete item into JSON table");
-        PreparedStatement deleteStatement = datastaxManager.getDeleteStatement(dir.getTableName());
+        String tableName = dir.getTableName();
 
-        List<String> partitionKeys = datastaxManager.getPartitionKeys(dir.getTableName());
-        List<String> clusteringColumns = datastaxManager.getClusteringColumns(dir.getTableName());
+        PreparedStatement deleteStatement = datastaxManager.getDeleteStatement(tableName);
+
+        Map<String, DataType.Name> partitionKeys = datastaxManager.getPartitionKeys(tableName);
+        Map<String, DataType.Name> clusteringColumns = datastaxManager.getClusteringColumns(tableName);
 
         Map<String, AttributeValue> keys = dir.getKey();
 
         Object partitionKey = null;
         Object clusteringKey = null;
         for (Map.Entry<String, AttributeValue> pair : keys.entrySet()) {
-           if (partitionKeys.contains(pair.getKey())){
+           if (partitionKeys.containsKey(pair.getKey())){
                partitionKey = getAttributeObject(pair.getValue());
-           }else if (clusteringColumns.contains(pair.getKey())){
+           }else if (clusteringColumns.containsKey(pair.getKey())){
                clusteringKey = getAttributeObject(pair.getValue());
            }
         }
@@ -375,8 +503,9 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
             logger.error(msg);
             return ddbResponse;
         }
-        List<String> partionKeys = datastaxManager.getPartitionKeys(payload.getTableName());
-        List<String> clusteringColumns = datastaxManager.getClusteringColumns(payload.getTableName());
+        String tableName = payload.getTableName();
+        Map<String, DataType.Name> partionKeys = datastaxManager.getPartitionKeys(tableName);
+        Map<String, DataType.Name> clusteringColumns = datastaxManager.getClusteringColumns(tableName);
 
         JsonNode items = payload.getItem();
 
@@ -416,17 +545,17 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
         PreparedStatement selectStatement = datastaxManager.getQueryRowStatement(tableName);
 
-        List<String> partitionKeys = datastaxManager.getPartitionKeys(tableName);
-        List<String> clusteringColumns = datastaxManager.getClusteringColumns(tableName);
+        Map<String, DataType.Name> partitionKeys = datastaxManager.getPartitionKeys(tableName);
+        Map<String, DataType.Name> clusteringColumns = datastaxManager.getClusteringColumns(tableName);
 
         Map<String, AttributeValue> keys = payload.getKey();
 
         Object partitionKey = null;
         Object clusteringKey = null;
         for (Map.Entry<String, AttributeValue> pair : keys.entrySet()) {
-           if (partitionKeys.contains(pair.getKey())){
+           if (partitionKeys.containsKey(pair.getKey())){
                partitionKey = getAttributeObject(pair.getValue());
-           }else if (clusteringColumns.contains(pair.getKey())){
+           }else if (clusteringColumns.containsKey(pair.getKey())){
                clusteringKey = getAttributeObject(pair.getValue());
            }
         }
@@ -469,7 +598,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         return itemsClone.toString();
     }
 
-    private ObjectNode organizeColumns(JsonNode items, List<String> partionKeys, List<String> clusteringColumns) {
+    private ObjectNode organizeColumns(JsonNode items, Map<String, DataType.Name> partionKeys, Map<String, DataType.Name> clusteringColumns) {
 
         ObjectNode itemsClone =  (ObjectNode) items.deepCopy();
         Set<String> removeMe = new HashSet<String>();
@@ -478,7 +607,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         for (Iterator<Map.Entry<String, JsonNode>> it = itemsClone.fields(); it.hasNext(); ) {
             Map.Entry<String, JsonNode> item = it.next();
             String itemKey = item.getKey();
-            if (!partionKeys.contains(itemKey) && !clusteringColumns.contains(itemKey)){
+            if (!partionKeys.containsKey(itemKey) && !clusteringColumns.containsKey(itemKey)){
                 removeMe.add(itemKey);
                 jsonBlobNode.put(itemKey,item.getValue());
             }

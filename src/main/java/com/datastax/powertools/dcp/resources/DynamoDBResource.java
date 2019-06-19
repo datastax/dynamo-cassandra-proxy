@@ -39,8 +39,8 @@ public class DynamoDBResource {
                              @DefaultValue("sort_type_string") @QueryParam(value="N") String sortAttributeTypeString,
                              @DefaultValue("hash_type_string") @QueryParam(value="S") String hashAttributeTypeString
     ) {
-        ScalarAttributeType hashAttributeType = getAttributeTypeFromString(hashAttributeTypeString);
-        ScalarAttributeType sortAttributeType = getAttributeTypeFromString(sortAttributeTypeString);
+        ScalarAttributeType hashAttributeType = ScalarAttributeType.valueOf(hashAttributeTypeString);
+        ScalarAttributeType sortAttributeType = ScalarAttributeType.valueOf(sortAttributeTypeString);
 
         CreateTableRequest request = new CreateTableRequest()
                 .withAttributeDefinitions(new AttributeDefinition(
@@ -56,18 +56,6 @@ public class DynamoDBResource {
         CreateTableResult response = ddb.createTable(request);
 
         asyncResponse.resume(Response.ok(response).build());
-    }
-
-    private ScalarAttributeType getAttributeTypeFromString(String attributeTypeString) {
-        ScalarAttributeType attributeType;
-        if (attributeTypeString.equals("S")){
-            attributeType = ScalarAttributeType.S;
-        }else if (attributeTypeString.equals("B")){
-            attributeType = ScalarAttributeType.B;
-        }else {
-            attributeType = ScalarAttributeType.N;
-        }
-        return attributeType;
     }
 
     @ManagedAsync

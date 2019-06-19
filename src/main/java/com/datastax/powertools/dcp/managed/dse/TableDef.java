@@ -7,14 +7,15 @@ package com.datastax.powertools.dcp.managed.dse;
  */
 
 
+import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.PreparedStatement;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TableDef {
-    private List<String> partitionKeys = new ArrayList<>();
-    private List<String> clusteringColumns = new ArrayList<>();
+    private Map<String, DataType.Name> partitionKeyMap = new HashMap<String, DataType.Name>();
+    private Map<String, DataType.Name> clusteringColumnMap = new HashMap<String, DataType.Name>();
     private PreparedStatement jsonPutStatement;
     private PreparedStatement jsonQueryPartitionStatement;
     private PreparedStatement jsonQueryRowStatement;
@@ -33,20 +34,20 @@ public class TableDef {
         this.jsonQueryRowStatement = jsonQueryRowStatement;
     }
 
-    public List<String> getPartitionKeys() {
-        return partitionKeys;
+    public Map<String, DataType.Name> getPartitionKeyMap() {
+        return partitionKeyMap;
     }
 
-    public void setPartitionKeys(List<String> partitionKeys) {
-        this.partitionKeys = partitionKeys;
+    public void setPartitionKeyMap(Map<String, DataType.Name> partitionKeyMap) {
+        this.partitionKeyMap = partitionKeyMap;
     }
 
-    public List<String> getClusteringColumns() {
-        return clusteringColumns;
+    public Map<String, DataType.Name> getClusteringColumnMap() {
+        return clusteringColumnMap;
     }
 
-    public void setClusteringColumns(List<String> clusteringColumns) {
-        this.clusteringColumns = clusteringColumns;
+    public void setClusteringColumnMap(Map<String, DataType.Name> clusteringColumnMap) {
+        this.clusteringColumnMap = clusteringColumnMap;
     }
 
     public PreparedStatement getJsonPutStatement() {
@@ -57,12 +58,12 @@ public class TableDef {
         this.jsonPutStatement = jsonPutStatement;
     }
 
-    public void addPK(String colName) {
-        this.partitionKeys.add(colName);
+    public void addPK(String colName, DataType.Name type) {
+        this.partitionKeyMap.put(colName, type);
     }
 
-    public void addClusteringColumn(String colName) {
-        this.clusteringColumns.add(colName);
+    public void addClusteringColumn(String colName, DataType.Name type) {
+        this.clusteringColumnMap.put(colName, type);
     }
 
     public PreparedStatement getJsonQueryPartitionStatement() {

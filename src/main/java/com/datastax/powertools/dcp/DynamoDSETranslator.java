@@ -26,9 +26,9 @@ public abstract class DynamoDSETranslator {
     public abstract DynamoDBResponse getItem(GetItemRequest payload);
     public abstract DynamoDBResponse query(DynamoDBRequest payload);
     public abstract DynamoDBResponse deleteItem(DeleteItemRequest dir);
+    public abstract DynamoDBResponse describeTable(DynamoDBRequest dtr);
 
     protected String getKeyspaceName() {
         return keyspaceName;
     }
-
 }
