@@ -9,7 +9,6 @@ package com.datastax.powertools.dcp;
 
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.datastax.driver.core.*;
-import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
@@ -35,7 +34,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     private final String keyspaceName;
     private final DatastaxManager datastaxManager;
     private final ObjectMapper mapper;
-    private DseSession session;
+    private Session session;
 
     public DynamoDSETranslatorJSONBlob(DatastaxManager datastaxManager) {
         super(datastaxManager);
@@ -580,7 +579,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         return new DynamoDBResponse(gir, 200);
     }
 
-    private DseSession cacheAndOrGetCachedSession() {
+    private Session cacheAndOrGetCachedSession() {
         if (this.session == null){
             this.session = datastaxManager.getSession();
             return session;
