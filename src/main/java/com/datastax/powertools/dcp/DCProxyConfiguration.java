@@ -41,7 +41,10 @@ public class DCProxyConfiguration extends Configuration {
     private String dynamoAccessKey= "fake-key";
     @JsonProperty
     private String dynamoSecretKey= "fake-secret";
+    @JsonProperty
     private boolean streamsEnabled;
+    @JsonProperty
+    private boolean dockerCassanadra;
 
     @JsonProperty
     public void setContactPoints(String contactPoints) {
@@ -157,5 +160,9 @@ public class DCProxyConfiguration extends Configuration {
 
     public boolean isStreamsEnabled() {
         return streamsEnabled;
+    }
+
+    public boolean isDockerCassandra() {
+        return dockerCassanadra;
     }
 }

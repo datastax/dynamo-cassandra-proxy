@@ -20,6 +20,8 @@ It also supports the ability to sync DynamoDB tables with cassandra via DynamoDB
 
 ## MVP Roadmap:
 
+Check means currently completed:
+
  - [x] CreateTable - Done in json_blob
  - [x] DeleteItem - Done in json_blob
  - [ ] DeleteTable

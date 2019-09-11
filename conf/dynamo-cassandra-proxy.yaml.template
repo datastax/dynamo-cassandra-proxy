@@ -4,3 +4,4 @@ dynamoSecretKey: <SECRET>
 awsDynamodbEndpoint: apigateway.us-east-2.amazonaws.com
 streamsEnabled: false
 contactPoints: localhost
+dockerCassandra: false
