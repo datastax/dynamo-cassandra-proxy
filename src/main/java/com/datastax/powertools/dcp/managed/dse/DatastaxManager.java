@@ -7,13 +7,13 @@ package com.datastax.powertools.dcp.managed.dse;
  */
 
 
+import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.datastax.driver.dse.DseCluster;
-import com.datastax.driver.dse.DseSession;
 import com.datastax.powertools.dcp.DCProxyConfiguration;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
@@ -27,13 +27,13 @@ public class DatastaxManager implements Managed {
 
     private int cqlPort = 9042;
     private String contactPoints = new String();
-    private DseCluster cluster;
+    private Cluster cluster;
 
-    public DseSession getSession() {
+    public Session getSession() {
         return session;
     }
 
-    private DseSession session;
+    private Session session;
     private String username;
     private String password;
     private String keyspaceName;
@@ -55,7 +55,7 @@ public class DatastaxManager implements Managed {
     }
 
     public void start() {
-        DseCluster.Builder builder = DseCluster.builder().
+        Cluster.Builder builder = Cluster.builder().
                 addContactPoints(contactPoints.split(",")).
                 withPort(cqlPort).
                 withCredentials(username, password).
