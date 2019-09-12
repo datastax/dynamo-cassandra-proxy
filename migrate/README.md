@@ -47,9 +47,9 @@ https://github.com/jphaugla/spark-dynamodb/blob/master/README.md
 
   * Navigate to the migrate directory of the downloaded project
   * Execute the following command:
-       `git clone https://github.com/phact/dynamo-cassandra-proxy.git`
+       `git clone git@github.com:datastax/dynamo-cassandra-proxy.git`
   * Build the code 
-	`mvn package`
+	`cd dynamodb-cassandra-proxy/migrate && mvn package`
   
 
 ### To run 

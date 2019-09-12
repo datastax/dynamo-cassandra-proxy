@@ -27,6 +27,12 @@ The following are the options supported by the proxy:
 
 ## To run locally
 
+Clone:
+
+    git clone git@github.com:datastax/dynamo-cassandra-proxy.git
+
+Run:
+
     java -Ddw.contactPoints="$contactPoints" -cp target/dynamodb-cassandra-proxy-0.1.0.jar com.datastax.powertools.dcp.DCProxyApplication server conf/dynamo-cassandra-proxy.yaml
 
 
