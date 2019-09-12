@@ -49,7 +49,7 @@ Check means currently completed:
  - [x] Hybrid functionality - DDB to Cassandra
  - [ ] Hybrid functionality - Cassandra to DDB
 
-## Other features:
+**Other features** not yet implemented:
 
 - UpdateItem
 - BatchGetItem
