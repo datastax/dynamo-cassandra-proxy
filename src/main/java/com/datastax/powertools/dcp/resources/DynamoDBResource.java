@@ -19,6 +19,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.*;
 
+/*
+ * This class performs requests against AWS DynamoDB and is used primarily for testing
+ */
+
 @Path("/ddb")
 @Produces(MediaType.APPLICATION_JSON)
 public class DynamoDBResource {

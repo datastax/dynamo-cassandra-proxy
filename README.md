@@ -31,9 +31,39 @@ Clone:
 
     git clone git@github.com:datastax/dynamo-cassandra-proxy.git
 
-Run:
+Build:
+
+    mvn package
+
+Run the app: whether you point the proxy at your own c* cluster or you rely on the proxy to stand up a cassandra node using the cassandraDocker option in the yaml. You can run the code locally by:
 
     java -Ddw.contactPoints="$contactPoints" -cp target/dynamodb-cassandra-proxy-0.1.0.jar com.datastax.powertools.dcp.DCProxyApplication server conf/dynamo-cassandra-proxy.yaml
+
+The proxy will come up and listen on port :8080. In your dynamodb application, just point your app to `<host>:8080` in the SDK. A sample connection string (in Java) should look as follows:
+
+            ClientConfiguration config = new ClientConfiguration();
+            config.setMaxConnections(dynamodbMaxConnections);;
+            String dynamodbEndpoint = "localhost:8080"
+            String signinRegion = "dummy"
+            AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder
+                    .EndpointConfiguration(protocol + "://" + dynamodbEndpoint, signinRegion);
+            ddbBuilder = AmazonDynamoDBClientBuilder.standard()
+                    .withClientConfiguration(config)
+                    .withEndpointConfiguration(endpointConfiguration);
+
+
+Note, `MaxConnections` is the main lever to get the AWS SDK to perform beyond very basic levels. We have tested this up to the maxium of 50 and it appears to scale almost linearly all the way up on a medum sized box. If you are doing some benchmarking and are looking to try to saturate a cassandra cluster, crank this value up.
+
+## To run via docker-compose
+
+Build the app
+
+    mvn package
+    
+Build and run the docker containerst st
+    
+    docker-compose up
+
 
 
 ## Contributing

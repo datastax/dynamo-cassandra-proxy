@@ -73,7 +73,8 @@ public class DockerHelper {
 
             cmd.exec(new LogCallback());
 
-            if(loggingCallback.awaitCompletion(100, TimeUnit.SECONDS)) {
+            long timeout = 1;
+            if(loggingCallback.awaitCompletion(timeout, TimeUnit.SECONDS)) {
                 logger.info("cassandra container started, cql listenning");
             }else{
                 logger.warn("timed out waiting for cassandra container to start");
