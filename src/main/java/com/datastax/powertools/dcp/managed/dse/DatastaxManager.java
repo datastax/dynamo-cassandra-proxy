@@ -28,6 +28,7 @@ public class DatastaxManager implements Managed {
     private int cqlPort = 9042;
     private String contactPoints = new String();
     private Cluster cluster;
+    private boolean dockerCassandra;
 
     public Session getSession() {
         return session;
@@ -52,6 +53,7 @@ public class DatastaxManager implements Managed {
         password = config.getCqlPassword();
         keyspaceName = config.getKeyspaceName();
         replicationStrategy= config.getReplicationStrategy();
+        dockerCassandra= config.isDockerCassandra();
     }
 
     public void start() {
@@ -63,15 +65,20 @@ public class DatastaxManager implements Managed {
 
         password = null; // defensive
 
+        if(dockerCassandra) {
+            logger.info("Docker cassandra enabled in the yaml.");
+            logger.info("Attempting to stand up container.");
+            DockerHelper dh = new DockerHelper();
+            dh.startDSE();
+        }
+
+
         cluster = builder.build();
         try {
             session = this.cluster.connect();
         }catch (NoHostAvailableException e){
-            logger.warn("Cluster not found, standing up container.");
-            DockerHelper dh = new DockerHelper();
-            dh.startDSE();
-            cluster = builder.build();
-            session = this.cluster.connect();
+            logger.error(e.getMessage());
+            System.exit(1);
         }
         logger.info("Preparing statements for " + DatastaxManager.class.getSimpleName());
         stmts = new DSEStmts.Prepared(session, keyspaceName, replicationStrategy);
@@ -126,7 +133,7 @@ public class DatastaxManager implements Managed {
                                 table,
                                 colName,
                                 pk
-                                ));
+                        ));
                 tableRepresentation.setDeleteStatement(deleteStatement);
 
                 PreparedStatement queryRowStatement = stmts.prepare(
@@ -136,7 +143,7 @@ public class DatastaxManager implements Managed {
                                 table,
                                 colName,
                                 pk
-                                ));
+                        ));
                 tableRepresentation.setQueryRowStatement(queryRowStatement);
             }
 

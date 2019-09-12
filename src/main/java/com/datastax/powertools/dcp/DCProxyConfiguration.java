@@ -44,7 +44,7 @@ public class DCProxyConfiguration extends Configuration {
     @JsonProperty
     private boolean streamsEnabled;
     @JsonProperty
-    private boolean dockerCassanadra;
+    private boolean dockerCassandra;
 
     @JsonProperty
     public void setContactPoints(String contactPoints) {
@@ -163,6 +163,6 @@ public class DCProxyConfiguration extends Configuration {
     }
 
     public boolean isDockerCassandra() {
-        return dockerCassanadra;
+        return dockerCassandra;
     }
 }

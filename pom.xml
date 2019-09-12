@@ -74,20 +74,25 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>${testing.version}</version>
+            <version>${testng.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <artifactId>jersey-client</artifactId>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <version>2.25.1</version>
         </dependency>
     </dependencies>
 
     <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-      <dropwizard.version>1.3.5</dropwizard.version>
+      <dropwizard.version>1.3.14</dropwizard.version>
       <java.version>11</java.version>
       <java.driver.version>3.7.2</java.driver.version>
       <jaxb.version>2.2.11</jaxb.version>
-      <docker.java.version>3.0.14</docker.java.version>
+      <docker.java.version>3.1.2</docker.java.version>
       <netty.version>4.0.56.Final</netty.version>
-      <testing.version>7.0.0-beta1</testing.version>
+      <testng.version>7.0.0-beta1</testng.version>
       <activation.version>1.1.1</activation.version>
       <dynamodb.sdk.version>1.11.438</dynamodb.sdk.version>
       <dynamodb.streams.kinesis.version>1.4.0</dynamodb.streams.kinesis.version>
