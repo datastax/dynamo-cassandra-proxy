@@ -1,8 +1,8 @@
 # dynamo-cassandra-proxy
 
-`dynamo-cassandra-proxy` は、アプリケーションと Apache Cassandra の間に座る、スケーラブルなプロキシレイヤーからなります。
+`dynamo-cassandra-proxy` は、アプリケーションと Apache Cassandra の間に座る、スケーラブルなプロキシレイヤーとして構成されます。
 
-DynamoDB SDK との互換性を提供します。そうすることで、既存の DynamoDB アプリケーションに変更を加えることなく Cassandra を対象としたデータの読み書きを可能にします。
+このプロキシレイヤーは、DynamoDB SDK との互換性を提供します。そうすることで、既存の DynamoDB アプリケーションに変更を加えることなく Cassandra を対象としたデータの読み書きが可能になります。
 
 また、DynamoDB Streams 経由で、DynamoDB のテーブルを Cassandra 側と同期させる機能もサポートします。
 
@@ -16,11 +16,11 @@ DynamoDB SDK との互換性を提供します。そうすることで、既存�
 
 | オプション | 説明 |
 | -------- | ---------- |
-|streamsEnabled| true に設定すると、プロキシは既存の dynamodb テーブルからのライブデータの取り込みを有効します| 
-|dynamoRegion| 上記のストリーミングを有効にした場合にのみ必要。dynamodb テーブルが格納さているリージョン|
-|dyanmoAccessKey| 上記のストリーミングを有効にした場合にのみ必要。dynamodb streams への接続に使用|
-|dyanmoSecretKey| 上記のストリーミングを有効にした場合にのみ必要。dynamodb streams への接続に使用|
-|awsDynamodbEndpoint| 上記のストリーミングを有効にした場合にのみ必要。dynamodb streams への接続に使用|
+|streamsEnabled| true に設定すると、プロキシは既存の DynamoDB テーブルからのライブデータの取り込みを有効します| 
+|dynamoRegion| 上記のストリーミングを有効にした場合にのみ必要。DynamoDB テーブルが格納さているリージョン|
+|dyanmoAccessKey| 上記のストリーミングを有効にした場合にのみ必要。DynamoDB Streams への接続に使用|
+|dyanmoSecretKey| 上記のストリーミングを有効にした場合にのみ必要。DynamoDB Streams への接続に使用|
+|awsDynamodbEndpoint| 上記のストリーミングを有効にした場合にのみ必要。DynamoDB Streams への接続に使用|
 |contactPoints| Apache Cassandra(TM) クラスターへの接続に使用するコンタクトポイント。下記の docker オプションを使用する場合は、localhost のままにします|
 |dockerCassandra| true に設定すると、ローカルの docker で Cassandra を起動します。docker デーモンがインストールされ、実行されていることと、使用するユーザーが `docker ps` の実行権限を持っていることを確認してください|
 
@@ -39,7 +39,7 @@ DynamoDB SDK との互換性を提供します。そうすることで、既存�
 
     java -Ddw.contactPoints="$contactPoints" -cp target/dynamodb-cassandra-proxy-0.1.0.jar com.datastax.powertools.dcp.DCProxyApplication server conf/dynamo-cassandra-proxy.yaml
 
-プロキシは起動すると、8080 番のポートをリッスンします。そうしたら、dymamodb アプリケーションを SDK の中で `<ホスト名>:8080` に向けます。接続文字列の参考例を以下に示します（Java の場合）。
+プロキシは起動すると、8080 番のポートをリッスンします。そうしたら、DynamoDB アプリケーションを SDK の中で `<ホスト名>:8080` に向けます。接続文字列の参考例を以下に示します（Java の場合）。
 
             ClientConfiguration config = new ClientConfiguration();
             config.setMaxConnections(dynamodbMaxConnections);;
@@ -65,6 +65,32 @@ docker コンテナをビルドして実行します。
     docker-compose up
 
 
+## ローカルの Kubernetes での実行
+
+Cassandra 用の config map の設定:
+
+    kubectl create configmap cassandra-config \
+--from-file=common/cassandra/conf-dir/resources/cassandra/conf 
+
+k8s yaml の適用:
+
+    kubectl apply -f k8s-local/proxy-suite.yaml 
+
+この時点で、pod は以下のようになっているはずです。
+
+```
+$ kubectl get pods                                                                                     [2:34:13]
+NAME                  READY   STATUS              RESTARTS   AGE
+cassandra-0           1/1     Running             0          2m35s
+cassandra-1           1/1     Running             0          168s
+cassandra-3           1/1     Running             0          123s
+dynamo-cass-proxy-0   1/1     Running             4          63s
+```
+
+実行したデプロイを終了するには、以下のようにします。
+
+    kubectl delete -f k8s-local/proxy-suite.yaml 
+
 
 ## コントリビューション
 
@@ -82,10 +108,10 @@ Translator の詳細については、[docs 内の Translators](docs/Translators
  - [x] PutItem - json_blob で実装
  - [ ] Query - json_blob で単純なケースを実装
  - [ ] Scan
- - [x] ハイブリッド機能 - DDB から Cassandra へ
- - [ ] ハイブリッド機能 - Cassandra から DDB へ
+ - [x] ハイブリッド機能 - DynamoDB から Cassandra へ
+ - [ ] ハイブリッド機能 - Cassandra から DynamoDB へ
 
-未実装の **その他の機能** not yet implemented:
+未実装の**その他の機能**
 
 - UpdateItem
 - BatchGetItem
