@@ -23,7 +23,6 @@ The following are the options supported by the proxy:
 |awsDynamodbEndpoint| Only needed when streaming is enabled, used to connect to dynamodb streams|
 |contactPoints| Contact points to connect to Apache Cassandra(TM) cluster. If you are using the docker option just leave localhost|
 |dockerCassandra| When set to true it will stand up Cassandra in your local docker. Ensure the docker deamon is installed and running and your user has access to run `docker ps`|
-```
 
 
 ## To run locally
