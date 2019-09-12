@@ -39,7 +39,7 @@ Run:
 ## Contributing
 
 A good place to start might be fleshing out your own Translator.
-For details on translators see Translators.md in /docs
+For details on translators see [Translators in the docs](docs/Translators.md)
 
 ## MVP Roadmap:
 
