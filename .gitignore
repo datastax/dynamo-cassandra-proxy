@@ -1,6 +1,8 @@
 conf/dynamo-cassandra-proxy.yaml
 logs/
 
+.idea
+
 # Created by https://www.gitignore.io/api/java,osx,emacs,intellij,maven
 
 ### Java ###
