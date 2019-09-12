@@ -11,7 +11,7 @@ services:
     build: ./ 
     container_name: "ddb-cas-proxy"
     command: |
-      java -Ddw.contactPoints="ddac" -cp /opt/dynamo-cassandra-proxy/dynamodb-cassandra-proxy-0.1.0.jar com.datastax.powertools.dcp.DCProxyApplication server /opt/dynamo-cassandra-proxy/dynamo-cassandra-proxy.yaml
+      java -Ddw.contactPoints="ddac" -jar /opt/dynamo-cassandra-proxy/dynamodb-cassandra-proxy-0.1.0.jar server /opt/dynamo-cassandra-proxy/dynamo-cassandra-proxy.yaml
     ports:
       - "8080:8080"
     depends_on:
