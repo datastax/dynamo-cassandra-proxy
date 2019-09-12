@@ -65,6 +65,32 @@ Build and run the docker containerst st
     docker-compose up
 
 
+## To run in local k8s
+
+Set up cassandra config map:
+
+    kubectl create configmap cassandra-config \
+--from-file=common/cassandra/conf-dir/resources/cassandra/conf 
+
+Apply k8s yaml:
+
+    kubectl apply -f k8s-local/proxy-suite.yaml 
+
+At this point, your pods should look as follows:
+
+```
+$ kubectl get pods                                                                                     [2:34:13]
+NAME                  READY   STATUS              RESTARTS   AGE
+cassandra-0           1/1     Running             0          2m35s
+cassandra-1           1/1     Running             0          168s
+cassandra-3           1/1     Running             0          123s
+dynamo-cass-proxy-0   1/1     Running             4          63s
+```
+
+To terminate your deploymet run:
+
+    kubectl delete -f k8s-local/proxy-suite.yaml 
+
 
 ## Contributing
 

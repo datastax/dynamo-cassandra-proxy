@@ -12,7 +12,7 @@ import io.dropwizard.Configuration;
 
 public class DCProxyConfiguration extends Configuration {
 
-    //DSE Stuff
+    //Cassandra Stuff
     @JsonProperty
     private int cqlPort = 9042;
     @JsonProperty
