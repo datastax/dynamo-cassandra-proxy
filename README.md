@@ -91,6 +91,25 @@ To terminate your deploymet run:
 
     kubectl delete -f k8s-local/proxy-suite.yaml 
 
+## To run on GKE
+
+Set up configMap
+
+    kubectl create configmap cassandra-config \
+        --from-file=common/cassandra/conf-dir/resources/cassandra/conf
+
+Apply k8s yaml:
+
+    kubectl apply -f gke/proxy-suite.yaml 
+
+The workload will appear on your google console like so (ensure you're viewing the right project):
+
+![gke](docs/images/gke.png)
+
+To terminate your deploymet run:
+
+    kubectl delete -f gke/proxy-suite.yaml 
+
 
 ## Contributing
 

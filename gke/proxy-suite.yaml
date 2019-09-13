@@ -1,0 +1,198 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra-ext-lb
+  labels:
+    app: cassandra 
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9042
+    name: cql-port
+  selector:
+    app: cassandra
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra
+  labels:
+    app: cassandra
+spec:
+  ports:
+  - port: 9042
+    name: cql-port
+  clusterIP: None
+  selector:
+    app: cassandra
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cassandra 
+spec:
+  selector:
+    matchLabels:
+      app: cassandra
+  serviceName: "cassandra"
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: cassandra
+    spec:
+      securityContext:
+        fsGroup: 999
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - cassandra
+            topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 12000
+      containers:
+      - name: cassandra
+        image: datastax/ddac:latest
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4000Mi"
+        env:
+        - name: DS_LICENSE
+          value: accept
+        - name: SEEDS
+          value: cassandra-0.cassandra.default.svc.cluster.local,cassandra-1.cassandra.default.svc.cluster.local,cassandra-2.cassandra.default.svc.cluster.local
+        - name: CLUSTER_NAME
+          value: "Test_Cluster"
+        - name: NUM_TOKENS
+          value: "64"
+        - name: DC
+          value: "DC-1"
+        - name: RACK
+          value: "rack-1"
+        - name: SNITCH
+          value: GossipingPropertyFileSnitch
+        ports:
+        - containerPort: 7000
+          name: intra-node-port
+        - containerPort: 7001
+          name: tls-intra-node
+        - containerPort: 7199
+          name: jmx-port
+        - containerPort: 8609
+          name: inter-node-msg
+        - containerPort: 9042
+          name: cql-port
+        - containerPort: 9160
+          name: thrift-port
+        - containerPort: 9103
+          name: ds-agent-port
+        volumeMounts:
+        - name: cassandra-data
+          mountPath: /var/lib/cassandra
+        - name: config-volume
+          mountPath: /config
+        livenessProbe:
+          tcpSocket:
+            port: 9042
+          initialDelaySeconds: 900
+          timeoutSeconds: 1
+          periodSeconds: 30
+          failureThreshold: 10
+        lifecycle:
+          postStart:
+            exec:
+              command: ['/bin/sh', '-c', 'until cqlsh -e "describe cluster"; do echo waiting for DSE Startup Complete; sleep 10; done;']
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "exec nodetool decommission"]
+      volumes:
+      - name: config-volume
+        configMap:
+          name: cassandra-config
+  volumeClaimTemplates:
+  - metadata:
+      name: cassandra-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: fast
+      resources:
+        requests:
+          storage: 40Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynamo-cass-proxy-ext-lb
+  labels:
+    app: dynamo-cass-proxy 
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+    name: port-8080
+  selector:
+    app: dynamo-cass-poxy 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynamo-cass-proxy 
+  labels:
+    app: proxy
+spec:
+  ports:
+  - port: 8080
+    name: port-8080
+  clusterIP: None
+  selector:
+    app: dynamo-cass-proxy 
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dynamo-cass-proxy 
+spec:
+  selector:
+    matchLabels:
+      app: dynamo-cass-proxy
+  serviceName: "dynamo-cass-proxy"
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: dynamo-cass-proxy
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+      - name: dynamo-cass-proxy
+        image: phact/dynamo-cassandra-proxy
+        command: ['/bin/sh', '-c', 'java -Ddw.contactPoints="cassandra" -cp /opt/dynamo-cassandra-proxy/dynamodb-cassandra-proxy-0.1.0.jar com.datastax.powertools.dcp.DCProxyApplication server /opt/dynamo-cassandra-proxy/dynamo-cassandra-proxy.yaml']
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4000Mi"
+        ports:
+        - containerPort: 8080
+          name: port-8080
