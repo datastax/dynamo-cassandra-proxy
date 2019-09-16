@@ -22,6 +22,7 @@ import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.powertools.dcp.DynamoDSETranslator;
 import com.datastax.powertools.dcp.api.DynamoDBRequest;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
+import com.datastax.powertools.dcp.api.DynamoStatementType;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -63,30 +64,34 @@ public class DCProxyResource {
     public void asyncDynamoRequestHandler(@Suspended final AsyncResponse asyncResponse, @Context HttpHeaders headers, @HeaderParam("X-Amz-Target") String target, String payload) {
         target = target.split("\\.")[1];
 
+        DynamoStatementType statementType = DynamoStatementType.valueOf(target);
+
         //TODO: better type than Object?
         //AmazonWebServiceResult response = null;
         DynamoDBResponse response = null;
         try {
             DynamoDBRequest dbr = mapper.readValue(payload, DynamoDBRequest.class);
 
-            switch (target){
-                case "CreateTable": response = ddt.createTable(dbr);
+            switch (statementType){
+                case CreateTable: response = ddt.createTable(dbr);
                 break;
-                case "DescribeTable": response = ddt.describeTable(dbr);
+                case DeleteTable : response = ddt.deleteTable(dbr);
                 break;
-                case "PutItem": response = ddt.putItem(dbr);
+                case DescribeTable: response = ddt.describeTable(dbr);
                 break;
-                case "GetItem": {
+                case PutItem: response = ddt.putItem(dbr);
+                break;
+                case GetItem: {
                     GetItemRequest gir = mapper.readValue(payload, GetItemRequest.class);
                     response = ddt.getItem(gir);
                 }
                 break;
-                case "DeleteItem": {
+                case DeleteItem: {
                     DeleteItemRequest dir = mapper.readValue(payload, DeleteItemRequest.class);
                     response = ddt.deleteItem(dir);
                 }
                     break;
-                case "Query": response = ddt.query(dbr);
+                case Query: response = ddt.query(dbr);
                 break;
                 default: {
                     logger.error("query type not supported");

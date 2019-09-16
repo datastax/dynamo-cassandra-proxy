@@ -360,6 +360,29 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     @Override
+    public DynamoDBResponse deleteTable(DynamoDBRequest payload) {
+        logger.info("deleting JSON table");
+
+        session = cacheAndOrGetCachedSession();
+
+        String keyspace = keyspaceName;
+        String table = payload.getTableName();
+        String statement = String.format("DROP TABLE %s.%s;\n", keyspace, table);
+        ResultSet result = this.session.execute(statement);
+        if (result.wasApplied()) {
+
+            logger.info("deleted table " + table);
+
+            datastaxManager.refreshSchema();
+
+            TableDescription newTableDesc = this.getTableDescription(table, payload);
+            DeleteTableResult createResult = (new DeleteTableResult()).withTableDescription(newTableDesc);
+            return new DynamoDBResponse(createResult, 200);
+        }
+        return null;
+    }
+
+    @Override
     public DynamoDBResponse createTable(DynamoDBRequest payload) {
         logger.info("creating JSON table");
 

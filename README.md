@@ -122,7 +122,7 @@ Check means currently completed:
 
  - [x] CreateTable - Done in json_blob
  - [x] DeleteItem - Done in json_blob
- - [ ] DeleteTable
+ - [x] DeleteTable - Done in json_blob
  - [x] GetItem - Done in json_blob
  - [x] PutItem - Done in json_blob
  - [ ] Query - Simple Case done in json_blob

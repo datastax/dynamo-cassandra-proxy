@@ -18,7 +18,6 @@ package com.datastax.powertools.dcp.managed.dse;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.ListContainersCmd;
-import com.github.dockerjava.api.command.LogContainerCmd;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
@@ -33,9 +32,14 @@ import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
 import com.github.dockerjava.core.command.PullImageResultCallback;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -73,26 +77,51 @@ public class DockerHelper {
                 LogContainerResultCallback();
 
         //TODO: actually detect that the container is up.
-        try {
-            LogContainerCmd cmd = dockerClient.logContainerCmd(containerId)
-                    .withStdOut(true)
-                    .withFollowStream(true)
-                    .withTailAll();
+        waitForPort("localhost",9042, Duration.ofMillis(50000), logger, true);
 
-            cmd.exec(new LogCallback());
+    }
 
-            long timeout = 1;
-            if(loggingCallback.awaitCompletion(timeout, TimeUnit.SECONDS)) {
-                logger.info("cassandra container started, cql listenning");
-            }else{
-                logger.warn("timed out waiting for cassandra container to start");
+    public static boolean waitForPort(String hostname, int port, Duration timeout, Logger logger, boolean quiet)
+    {
+        long deadlineNanos = System.nanoTime() + timeout.toNanos();
+
+        while(System.nanoTime() < deadlineNanos)
+        {
+            SocketChannel channel = null;
+
+            try
+            {
+                logger.info("Checking {}:{}", hostname,port);
+                channel = SocketChannel.open(new InetSocketAddress(hostname, port));
+            }
+            catch(IOException e)
+            {
+                Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
             }
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            logger.error("unable to detect grafana start");
+            if (channel != null)
+            {
+                try
+                {
+                    channel.close();
+                }
+                catch (IOException e)
+                {
+                    //Close quietly
+                }
+
+                logger.info("Connected to {}:{}", hostname,port);
+                return true;
+            }
         }
 
+        //The port never opened
+        if (!quiet)
+        {
+            logger.warn("Failed to connect to {}:{} after {} sec", hostname, port, timeout.toSeconds());
+        }
+
+        return false;
     }
 
     private String startDocker(String IMG, String tag, String name, List<Integer> ports, List<String> volumeDescList, List<String> envList, List<String> cmdList) {
