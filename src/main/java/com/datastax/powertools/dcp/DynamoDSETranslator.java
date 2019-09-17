@@ -16,9 +16,10 @@
 package com.datastax.powertools.dcp;
 
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.datastax.powertools.dcp.api.DynamoDBRequest;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+
+import java.io.IOException;
 
 public abstract class DynamoDSETranslator {
     private final DatastaxManager datastaxManager;
@@ -29,13 +30,13 @@ public abstract class DynamoDSETranslator {
         this.keyspaceName = datastaxManager.getKeyspaceName();
     }
 
-    public abstract DynamoDBResponse createTable(DynamoDBRequest payload);
-    public abstract DynamoDBResponse putItem(DynamoDBRequest payload);
+    public abstract DynamoDBResponse createTable(CreateTableRequest payload) throws IOException;
+    public abstract DynamoDBResponse putItem(PutItemRequest payload) throws IOException;
     public abstract DynamoDBResponse getItem(GetItemRequest payload);
-    public abstract DynamoDBResponse query(DynamoDBRequest payload);
+    public abstract DynamoDBResponse query(QueryRequest payload);
     public abstract DynamoDBResponse deleteItem(DeleteItemRequest dir);
-    public abstract DynamoDBResponse describeTable(DynamoDBRequest dtr);
-    public abstract DynamoDBResponse deleteTable(DynamoDBRequest dbr);
+    public abstract DynamoDBResponse describeTable(DescribeTableRequest dtr);
+    public abstract DynamoDBResponse deleteTable(DeleteTableRequest dbr);
 
     protected String getKeyspaceName() {
         return keyspaceName;

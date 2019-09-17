@@ -16,11 +16,15 @@
 package com.datastax.powertools.dcp.resources;
 
 import com.amazonaws.AmazonWebServiceResult;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest;
+import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
+import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
+import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
+import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.powertools.dcp.DynamoDSETranslator;
-import com.datastax.powertools.dcp.api.DynamoDBRequest;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.api.DynamoStatementType;
 import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
@@ -32,7 +36,12 @@ import org.glassfish.jersey.server.ManagedAsync;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
@@ -70,16 +79,26 @@ public class DCProxyResource {
         //AmazonWebServiceResult response = null;
         DynamoDBResponse response = null;
         try {
-            DynamoDBRequest dbr = mapper.readValue(payload, DynamoDBRequest.class);
-
             switch (statementType){
-                case CreateTable: response = ddt.createTable(dbr);
+                case CreateTable: {
+                    CreateTableRequest createTableRequest= mapper.readValue(payload, CreateTableRequest.class);
+                    response = ddt.createTable(createTableRequest);
+                }
                 break;
-                case DeleteTable : response = ddt.deleteTable(dbr);
+                case DeleteTable : {
+                    DeleteTableRequest deleteTableRequest= mapper.readValue(payload, DeleteTableRequest.class);
+                    response = ddt.deleteTable(deleteTableRequest);
+                }
                 break;
-                case DescribeTable: response = ddt.describeTable(dbr);
+                case DescribeTable: {
+                    DescribeTableRequest describeTableRequest= mapper.readValue(payload, DescribeTableRequest.class);
+                    response = ddt.describeTable(describeTableRequest);
+                }
                 break;
-                case PutItem: response = ddt.putItem(dbr);
+                case PutItem: {
+                    PutItemRequest putItemRequest = mapper.readValue(payload, PutItemRequest.class);
+                    response = ddt.putItem(putItemRequest);
+                }
                 break;
                 case GetItem: {
                     GetItemRequest gir = mapper.readValue(payload, GetItemRequest.class);
@@ -90,8 +109,11 @@ public class DCProxyResource {
                     DeleteItemRequest dir = mapper.readValue(payload, DeleteItemRequest.class);
                     response = ddt.deleteItem(dir);
                 }
-                    break;
-                case Query: response = ddt.query(dbr);
+                break;
+                case Query: {
+                    QueryRequest queryRequest = mapper.readValue(payload, QueryRequest.class);
+                    response = ddt.query(queryRequest);
+                }
                 break;
                 default: {
                     logger.error("query type not supported");

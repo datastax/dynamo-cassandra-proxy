@@ -76,7 +76,6 @@ public class DockerHelper {
         LogContainerResultCallback loggingCallback = new
                 LogContainerResultCallback();
 
-        //TODO: actually detect that the container is up.
         waitForPort("localhost",9042, Duration.ofMillis(50000), logger, true);
 
     }
