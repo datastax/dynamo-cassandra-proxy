@@ -38,7 +38,6 @@ import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.TableStatus;
-
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.BoundStatement;
@@ -55,6 +54,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,13 +76,28 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-
 import static com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperFieldModel.DynamoDBAttributeType;
 import static com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperFieldModel.DynamoDBAttributeType.valueOf;
-import static com.amazonaws.services.dynamodbv2.model.KeyType.*;
-import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.*;
+import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
+import static com.amazonaws.services.dynamodbv2.model.KeyType.RANGE;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.ASCII;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.BIGINT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.BLOB;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.BOOLEAN;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.COUNTER;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.DATE;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.DECIMAL;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.DOUBLE;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.FLOAT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.INET;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.INT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.SMALLINT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.TIME;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.TIMEUUID;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.TINYINT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.UUID;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.VARCHAR;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.VARINT;
 
 /**
  * DynamoDb translator which encodes the document in a simple C* schema of (partition key, sort key, JSON string)
@@ -323,17 +339,17 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
 
     private Object getObjectFromJsonLeaf(Map.Entry<String, JsonNode> leaf) {
-        String key = leaf.getKey();
+        DynamoDBAttributeType key = valueOf(leaf.getKey());
         JsonNode value = leaf.getValue();
         try {
             switch (key) {
-                case "N":
+                case N:
                     return value.asDouble();
-                case "S":
+                case S:
                     return value.asText();
-                case "BOOL":
+                case BOOL:
                     return value.asBoolean();
-                case "B":
+                case B:
                     return value.binaryValue();
                 default:
                     logger.error("Type not supported");
@@ -417,14 +433,15 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
     private String attributeToPairs(AttributeDefinition attributeDefinition) {
         String name = "\"" + attributeDefinition.getAttributeName() + "\"";
-        switch(attributeDefinition.getAttributeType()) {
-            case "N":
+        DynamoDBAttributeType type = valueOf(attributeDefinition.getAttributeType());
+        switch(type) {
+            case N:
                 return name + " double";
-            case "S":
+            case S:
                 return name + " text";
-            case "BOOL":
+            case BOOL:
                 return name + " boolean";
-            case "B":
+            case B:
                 return name + " blob";
             default:
                 throw new RuntimeException("Type not supported");
@@ -529,20 +546,6 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
     }
 
-    private Object getAttributeObject(String type, AttributeValue value) {
-        //Note: only string, number, and binary are allowed for primary keys in dynamodb
-        switch (type) {
-            case "N":
-                return Double.parseDouble(value.getN());
-            case "S":
-                return value.getS();
-            case "B":
-                return value.getB();
-            default:
-                throw new IllegalStateException("Unknown dynamo scalar type: " + type);
-        }
-    }
-
     private Object getAttributeObject(ScalarAttributeType type, AttributeValue value) {
         //Note: only string, number, and binary are allowed for primary keys in dynamodb
         switch (type) {
@@ -618,11 +621,12 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         AttributeValue partitionKey = keys.get(partitionKeyDef.getAttributeName());
         AttributeValue clusteringKey = clusteringKeyDef.isPresent() ? keys.get(clusteringKeyDef.get().getAttributeName()) : null;
 
-
+        ScalarAttributeType partitionKeyType = ScalarAttributeType.valueOf(partitionKeyDef.getAttributeType());
+        ScalarAttributeType clusteringKeyType = ScalarAttributeType.valueOf(clusteringKeyDef.get().getAttributeType());
         BoundStatement boundStatement = clusteringKey == null ?
-                                        selectStatement.bind(getAttributeObject(partitionKeyDef.getAttributeType(), partitionKey)) :
-                                        selectStatement.bind(getAttributeObject(partitionKeyDef.getAttributeType(), partitionKey),
-                                                getAttributeObject(clusteringKeyDef.get().getAttributeType(), clusteringKey));
+                                        selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey)) :
+                                        selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey),
+                                                getAttributeObject(clusteringKeyType, clusteringKey));
 
         ResultSet result = session().execute(boundStatement);
 
