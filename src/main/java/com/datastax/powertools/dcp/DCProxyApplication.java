@@ -16,10 +16,9 @@
 package com.datastax.powertools.dcp;
 
 import com.datastax.powertools.dcp.managed.ddbstreams.DynamoStreamsManager;
-import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.CassandraManager;
 import com.datastax.powertools.dcp.managed.dynamodb.DynamoManager;
 import com.datastax.powertools.dcp.resources.DCProxyResource;
-import com.datastax.powertools.dcp.resources.DynamoDBResource;
 import io.dropwizard.Application;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
@@ -45,7 +44,7 @@ public class DCProxyApplication extends Application<DCProxyConfiguration> {
                     Environment environment) {
 
         //DataStax
-        DatastaxManager dseManager = new DatastaxManager();
+        CassandraManager dseManager = new CassandraManager();
         dseManager.configure(configuration);
         environment.lifecycle().manage(dseManager);
 
@@ -65,13 +64,9 @@ public class DCProxyApplication extends Application<DCProxyConfiguration> {
         dynamoManager.configure(configuration);
         environment.lifecycle().manage(dynamoManager);
 
-        final DynamoDBResource ddbResource = new DynamoDBResource(dynamoManager);
-        environment.jersey().register(ddbResource);
-
-
         //DynamoDBStreams
         if(configuration.isStreamsEnabled()){
-            DynamoStreamsManager dynamoStreamsManager = new DynamoStreamsManager(dynamoManager.createOrGetDDB());
+            DynamoStreamsManager dynamoStreamsManager = new DynamoStreamsManager(dynamoManager.get());
             dynamoStreamsManager.configure(configuration);
             environment.lifecycle().manage(dynamoStreamsManager);
         }

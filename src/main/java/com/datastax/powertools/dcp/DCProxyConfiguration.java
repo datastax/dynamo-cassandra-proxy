@@ -26,6 +26,8 @@ public class DCProxyConfiguration extends Configuration {
     @JsonProperty
     private String contactPoints = "localhost";
     @JsonProperty
+    private String localDC = "dc1";
+    @JsonProperty
     private String cqlUserName = "cassandra";
     @JsonProperty
     private String cqlPassword = "cassandra";
@@ -172,5 +174,9 @@ public class DCProxyConfiguration extends Configuration {
 
     public boolean isDockerCassandra() {
         return dockerCassandra;
+    }
+
+    public String getLocalDC() {
+        return localDC;
     }
 }

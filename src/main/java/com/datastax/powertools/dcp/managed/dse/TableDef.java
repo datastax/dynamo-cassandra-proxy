@@ -15,15 +15,24 @@
  */
 package com.datastax.powertools.dcp.managed.dse;
 
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.PreparedStatement;
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.*;
 
 public class TableDef {
-    private Map<String, DataType.Name> partitionKeyMap = new HashMap<String, DataType.Name>();
-    private Map<String, DataType.Name> clusteringColumnMap = new HashMap<String, DataType.Name>();
+    private static final Logger logger = LoggerFactory.getLogger(TableDef.class);
+
+    private AttributeDefinition partitionKey;
+    private Optional<AttributeDefinition> clusteringKey = Optional.empty();
+
     private PreparedStatement jsonPutStatement;
     private PreparedStatement jsonQueryPartitionStatement;
     private PreparedStatement jsonQueryRowStatement;
@@ -42,21 +51,14 @@ public class TableDef {
         this.jsonQueryRowStatement = jsonQueryRowStatement;
     }
 
-    public Map<String, DataType.Name> getPartitionKeyMap() {
-        return partitionKeyMap;
+    public AttributeDefinition getPartitionKey() {
+        return partitionKey;
     }
 
-    public void setPartitionKeyMap(Map<String, DataType.Name> partitionKeyMap) {
-        this.partitionKeyMap = partitionKeyMap;
+    public Optional<AttributeDefinition> getClusteringKey() {
+        return clusteringKey;
     }
 
-    public Map<String, DataType.Name> getClusteringColumnMap() {
-        return clusteringColumnMap;
-    }
-
-    public void setClusteringColumnMap(Map<String, DataType.Name> clusteringColumnMap) {
-        this.clusteringColumnMap = clusteringColumnMap;
-    }
 
     public PreparedStatement getJsonPutStatement() {
         return jsonPutStatement;
@@ -66,13 +68,53 @@ public class TableDef {
         this.jsonPutStatement = jsonPutStatement;
     }
 
-    public void addPK(String colName, DataType.Name type) {
-        this.partitionKeyMap.put(colName, type);
+    public void setPartitionKey(ColumnMetadata pk) {
+        this.partitionKey = convertToAttribute(pk);
     }
 
-    public void addClusteringColumn(String colName, DataType.Name type) {
-        this.clusteringColumnMap.put(colName, type);
+    public void setClusteringKey(ColumnMetadata column) {
+        this.clusteringKey = Optional.of(convertToAttribute(column));
     }
+
+    private AttributeDefinition convertToAttribute(ColumnMetadata column)
+    {
+        AttributeDefinition ad = new AttributeDefinition();
+        ad.setAttributeName(column.getName().asInternal());
+
+        switch (column.getType().getProtocolCode())
+        {
+            case BLOB:
+                ad.setAttributeType(ScalarAttributeType.B);
+                break;
+            case BIGINT:
+            case BOOLEAN:
+            case COUNTER:
+            case DECIMAL:
+            case DOUBLE:
+            case FLOAT:
+            case INT:
+            case VARINT:
+            case TINYINT:
+            case SMALLINT:
+                ad.setAttributeType(ScalarAttributeType.N);
+                break;
+            case TIMEUUID:
+            case UUID:
+            case INET:
+            case DATE:
+            case VARCHAR:
+            case ASCII:
+            case TIME:
+                ad.setAttributeType(ScalarAttributeType.S);
+                break;
+            default:
+                throw new IllegalArgumentException("Type not supported: " + column.getName().asInternal() + " " + column.getType());
+        }
+
+        return ad;
+    }
+
+
 
     public PreparedStatement getJsonQueryPartitionStatement() {
         return jsonQueryPartitionStatement;

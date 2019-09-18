@@ -15,13 +15,10 @@
  */
 package com.datastax.powertools.dcp.managed.dse;
 
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 
 public class DSEStmts {
-
-
     private static final String KEYSPACE_PATTERN = ";;;KEYSPACE;;;";
     private static final String REPLICATION_STRATEGY_PATTERN = ";;;REPLICATION_STRATEGY;;;";
 
@@ -30,13 +27,13 @@ public class DSEStmts {
 
     public static class Prepared {
         private final String keyspace;
-        private final Session session;
+        private final CqlSession session;
         private final String replicationStrategy;
 
         final PreparedStatement get_columns;
         final PreparedStatement create_keyspace;
 
-        public Prepared(Session session, String keyspace, String replicationStrategy) {
+        public Prepared(CqlSession session, String keyspace, String replicationStrategy) {
             this.keyspace = keyspace;
             this.session = session;
             this.replicationStrategy = replicationStrategy;
@@ -50,18 +47,10 @@ public class DSEStmts {
         }
 
         public PreparedStatement prepare(String stmt) {
-            String withKeyspace
-                    = stmt.replaceAll(KEYSPACE_PATTERN, this.keyspace);
-            String withReplication
-                    = withKeyspace.replaceAll(REPLICATION_STRATEGY_PATTERN, this.replicationStrategy);
-
+            String withKeyspace = stmt.replaceAll(KEYSPACE_PATTERN, this.keyspace);
+            String withReplication = withKeyspace.replaceAll(REPLICATION_STRATEGY_PATTERN, this.replicationStrategy);
             PreparedStatement prepared = session.prepare(withReplication);
 
-            if (stmt.contains("solr_query")) {
-                prepared.setConsistencyLevel(ConsistencyLevel.LOCAL_ONE);
-            } else {
-                prepared.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
-            }
             return prepared;
         }
     }

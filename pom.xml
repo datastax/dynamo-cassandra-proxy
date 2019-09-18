@@ -7,6 +7,13 @@
     <artifactId>dynamodb-cassandra-proxy</artifactId>
     <version>0.1.0</version>
 
+    <repositories>
+      <repository>
+        <id>dynamodblocal</id>
+        <name>AWS DynamoDB Local Release Repository</name>
+        <url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
+      </repository>
+    </repositories>
 
     <dependencies>
       <dependency>
@@ -15,8 +22,8 @@
         <version>${dropwizard.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.datastax.cassandra</groupId>
-        <artifactId>cassandra-driver-core</artifactId>
+        <groupId>com.datastax.oss</groupId>
+        <artifactId>java-driver-core</artifactId>
         <version>${java.driver.version}</version>
       </dependency>
         <dependency>
@@ -78,26 +85,47 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-testing</artifactId>
+            <version>${dropwizard.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <artifactId>jersey-client</artifactId>
             <groupId>org.glassfish.jersey.core</groupId>
             <version>2.25.1</version>
         </dependency>
+        <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>DynamoDBLocal</artifactId>
+          <version>${dynamodb.sdk.version}</version>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jetty</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+          </exclusions>
+      </dependency>
     </dependencies>
 
     <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <dropwizard.version>1.3.14</dropwizard.version>
       <java.version>11</java.version>
-      <java.driver.version>3.7.2</java.driver.version>
+      <java.driver.version>4.2.0</java.driver.version>
       <jaxb.version>2.2.11</jaxb.version>
       <docker.java.version>3.1.2</docker.java.version>
       <netty.version>4.0.56.Final</netty.version>
       <testng.version>7.0.0-beta1</testng.version>
       <activation.version>1.1.1</activation.version>
-      <dynamodb.sdk.version>1.11.438</dynamodb.sdk.version>
+      <dynamodb.sdk.version>1.11.477</dynamodb.sdk.version>
       <dynamodb.streams.kinesis.version>1.4.0</dynamodb.streams.kinesis.version>
     </properties>
-
 
     <build>
       <plugins>
@@ -109,7 +137,38 @@
             <release>${java.version}</release>
           </configuration>
         </plugin>
-
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.18.1</version>
+          <configuration>
+            <argLine>-Dsqlite4java.library.path=${basedir}/target/dependencies</argLine>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>2.7</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>2.10</version>
+          <executions>
+            <execution>
+              <id>copy-dependencies</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>copy-dependencies</goal>
+              </goals>
+              <configuration>
+                <outputDirectory>${project.build.directory}/dependencies</outputDirectory>
+                <overWriteReleases>false</overWriteReleases>
+                <overWriteSnapshots>false</overWriteSnapshots>
+                <overWriteIfNewer>true</overWriteIfNewer>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

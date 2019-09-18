@@ -50,14 +50,12 @@ public class DynamoManager implements Managed {
 
     }
 
-    public AmazonDynamoDB createOrGetDDB() {
-        AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(dynamodbEndpoint, signinRegion);
-        if (ddb != null){
-            return ddb;
-        }
-        else {
+    public synchronized AmazonDynamoDB get() {
+        if (ddb == null) {
+            AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(dynamodbEndpoint, signinRegion);
             ddb = AmazonDynamoDBClientBuilder.standard().withEndpointConfiguration(endpointConfiguration).build();
-            return ddb;
         }
+
+        return ddb;
     }
 }

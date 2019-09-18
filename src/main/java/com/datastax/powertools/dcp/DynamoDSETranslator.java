@@ -17,17 +17,45 @@ package com.datastax.powertools.dcp;
 
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
-import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.CassandraManager;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 
 import java.io.IOException;
 
 public abstract class DynamoDSETranslator {
-    private final DatastaxManager datastaxManager;
+    protected final CassandraManager cassandraManager;
     protected String keyspaceName;
 
-    public DynamoDSETranslator(DatastaxManager datastaxManager) {
-        this.datastaxManager = datastaxManager;
-        this.keyspaceName = datastaxManager.getKeyspaceName();
+    public static final ObjectMapper awsRequestMapper = new ObjectMapper()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            .setPropertyNamingStrategy(
+            //Map to AWS api style
+             new PropertyNamingStrategy.UpperCamelCaseStrategy() {
+                @Override
+                public String translate(String input) {
+                    String output = super.translate(input);
+
+                    if (output != null && output.length() >= 2) {
+                        switch (output) {
+                            case "Ss": return "SS";
+                            case "Bool": return "BOOL";
+                            case "Ns": return "NS";
+                            default:
+                                break;
+                        }
+                    }
+
+                    return output;
+                }
+            });
+
+    public DynamoDSETranslator(CassandraManager cassandraManager) {
+        this.cassandraManager = cassandraManager;
+        this.keyspaceName = cassandraManager.getKeyspaceName();
     }
 
     public abstract DynamoDBResponse createTable(CreateTableRequest payload) throws IOException;

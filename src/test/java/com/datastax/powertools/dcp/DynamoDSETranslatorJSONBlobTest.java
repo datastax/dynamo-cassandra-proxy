@@ -15,7 +15,7 @@
  */
 package com.datastax.powertools.dcp;
 
-import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.CassandraManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.testng.annotations.Test;
@@ -31,7 +31,7 @@ public class DynamoDSETranslatorJSONBlobTest {
 
     @Test
     public void testStripJson() throws IOException {
-        DatastaxManager dm = new DatastaxManager();
+        CassandraManager dm = new CassandraManager();
         DynamoDSETranslatorJSONBlob jsonBlobTranslator = new DynamoDSETranslatorJSONBlob(dm);
 
         ObjectMapper mapper = new ObjectMapper();
@@ -44,7 +44,7 @@ public class DynamoDSETranslatorJSONBlobTest {
 
     @Test
     public void testStripJsonArray() throws IOException {
-        DatastaxManager dm = new DatastaxManager();
+        CassandraManager dm = new CassandraManager();
         DynamoDSETranslatorJSONBlob jsonBlobTranslator = new DynamoDSETranslatorJSONBlob(dm);
 
         ObjectMapper mapper = new ObjectMapper();

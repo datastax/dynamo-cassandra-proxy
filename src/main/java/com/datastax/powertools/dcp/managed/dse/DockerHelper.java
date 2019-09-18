@@ -68,10 +68,7 @@ public class DockerHelper {
         List<String> envList = Arrays.asList("DS_LICENSE=accept");
         List<String> cmdList = Arrays.asList();
 
-
-
         String containerId = startDocker(img,tag,name, ports,volumeDescList, envList, cmdList);
-
 
         LogContainerResultCallback loggingCallback = new
                 LogContainerResultCallback();
@@ -223,7 +220,6 @@ public class DockerHelper {
         dockerClient.startContainerCmd(containerResponse.getId()).exec();
 
         return containerResponse.getId();
-
     }
 
 
@@ -250,9 +246,9 @@ public class DockerHelper {
         return null;
     }
 
-
-
-    public void stopDSE(){
-        dockerClient.startContainerCmd(container.getId()).exec();
+    public void stopDSE()
+    {
+        if (container != null)
+            dockerClient.stopContainerCmd(container.getId()).exec();
     }
 }

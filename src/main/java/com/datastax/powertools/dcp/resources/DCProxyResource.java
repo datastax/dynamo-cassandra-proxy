@@ -23,15 +23,11 @@ import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
-import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.powertools.dcp.DynamoDSETranslator;
 import com.datastax.powertools.dcp.api.DynamoDBResponse;
 import com.datastax.powertools.dcp.api.DynamoStatementType;
-import com.datastax.powertools.dcp.managed.dse.DatastaxManager;
+import com.datastax.powertools.dcp.managed.dse.CassandraManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import org.glassfish.jersey.server.ManagedAsync;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,22 +44,21 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
+import static com.datastax.powertools.dcp.DynamoDSETranslator.awsRequestMapper;
 
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 public class DCProxyResource {
 
-    private final DatastaxManager dseManager;
-    private final ObjectMapper mapper;
+    private final CassandraManager dseManager;
     private DynamoDSETranslator ddt;
     private Logger logger = LoggerFactory.getLogger(DCProxyResource.class);
 
-    public DCProxyResource(DatastaxManager dsManager, DynamoDSETranslator ddt) {
+
+
+    public DCProxyResource(CassandraManager dsManager, DynamoDSETranslator ddt) {
         this.dseManager = dsManager;
         this.ddt = ddt;
-        mapper = new ObjectMapper().setPropertyNamingStrategy(PropertyNamingStrategy.UPPER_CAMEL_CASE);
-        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     }
 
     @POST
@@ -74,44 +69,41 @@ public class DCProxyResource {
         target = target.split("\\.")[1];
 
         DynamoStatementType statementType = DynamoStatementType.valueOf(target);
-
-        //TODO: better type than Object?
-        //AmazonWebServiceResult response = null;
         DynamoDBResponse response = null;
         try {
             switch (statementType){
                 case CreateTable: {
-                    CreateTableRequest createTableRequest= mapper.readValue(payload, CreateTableRequest.class);
+                    CreateTableRequest createTableRequest = awsRequestMapper.readValue(payload, CreateTableRequest.class);
                     response = ddt.createTable(createTableRequest);
                 }
                 break;
                 case DeleteTable : {
-                    DeleteTableRequest deleteTableRequest= mapper.readValue(payload, DeleteTableRequest.class);
+                    DeleteTableRequest deleteTableRequest = awsRequestMapper.readValue(payload, DeleteTableRequest.class);
                     response = ddt.deleteTable(deleteTableRequest);
                 }
                 break;
                 case DescribeTable: {
-                    DescribeTableRequest describeTableRequest= mapper.readValue(payload, DescribeTableRequest.class);
+                    DescribeTableRequest describeTableRequest = awsRequestMapper.readValue(payload, DescribeTableRequest.class);
                     response = ddt.describeTable(describeTableRequest);
                 }
                 break;
                 case PutItem: {
-                    PutItemRequest putItemRequest = mapper.readValue(payload, PutItemRequest.class);
+                    PutItemRequest putItemRequest = awsRequestMapper.readValue(payload, PutItemRequest.class);
                     response = ddt.putItem(putItemRequest);
                 }
                 break;
                 case GetItem: {
-                    GetItemRequest gir = mapper.readValue(payload, GetItemRequest.class);
+                    GetItemRequest gir = awsRequestMapper.readValue(payload, GetItemRequest.class);
                     response = ddt.getItem(gir);
                 }
                 break;
                 case DeleteItem: {
-                    DeleteItemRequest dir = mapper.readValue(payload, DeleteItemRequest.class);
+                    DeleteItemRequest dir = awsRequestMapper.readValue(payload, DeleteItemRequest.class);
                     response = ddt.deleteItem(dir);
                 }
                 break;
                 case Query: {
-                    QueryRequest queryRequest = mapper.readValue(payload, QueryRequest.class);
+                    QueryRequest queryRequest = awsRequestMapper.readValue(payload, QueryRequest.class);
                     response = ddt.query(queryRequest);
                 }
                 break;
@@ -123,17 +115,19 @@ public class DCProxyResource {
                 break;
             }
         }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-        catch (DriverException e) {
+        catch (Throwable e) {
             e.printStackTrace();
         }
         finally {
 
+            if (response == null)
+            {
+                throw new WebApplicationException("Internal Error", 500);
+            }
+
             byte[] bytes = null;
             try {
-                bytes = mapper.writeValueAsBytes(response.getResult());
+                bytes = awsRequestMapper.writeValueAsBytes(response.getResult());
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
