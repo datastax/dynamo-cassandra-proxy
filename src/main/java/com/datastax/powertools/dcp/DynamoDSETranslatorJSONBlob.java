@@ -619,10 +619,13 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         Map<String, AttributeValue> keys = getItemRequest.getKey();
 
         AttributeValue partitionKey = keys.get(partitionKeyDef.getAttributeName());
-        AttributeValue clusteringKey = clusteringKeyDef.isPresent() ? keys.get(clusteringKeyDef.get().getAttributeName()) : null;
+        AttributeValue clusteringKey = clusteringKeyDef.isPresent() ?
+                keys.get(clusteringKeyDef.get().getAttributeName()) : null;
 
         ScalarAttributeType partitionKeyType = ScalarAttributeType.valueOf(partitionKeyDef.getAttributeType());
-        ScalarAttributeType clusteringKeyType = ScalarAttributeType.valueOf(clusteringKeyDef.get().getAttributeType());
+        ScalarAttributeType clusteringKeyType = clusteringKeyDef.isPresent() ?
+                ScalarAttributeType.valueOf(clusteringKeyDef.get().getAttributeType()) : null;
+
         BoundStatement boundStatement = clusteringKey == null ?
                                         selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey)) :
                                         selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey),
