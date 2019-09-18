@@ -18,7 +18,7 @@ package com.datastax.powertools.dcp.managed.dse;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 
-public class DSEStmts {
+public class CassandraStatements {
     private static final String KEYSPACE_PATTERN = ";;;KEYSPACE;;;";
     private static final String REPLICATION_STRATEGY_PATTERN = ";;;REPLICATION_STRATEGY;;;";
 

@@ -48,7 +48,7 @@ public class CassandraManager implements Managed {
     private DCProxyConfiguration config;
     private String keyspaceName;
     private CqlSession session;
-    private DSEStmts.Prepared stmts;
+    private CassandraStatements.Prepared stmts;
     private final Map<String, TableDef> tableDefs = Maps.newConcurrentMap();
 
     public void configure(DCProxyConfiguration config) {
@@ -78,7 +78,7 @@ public class CassandraManager implements Managed {
         session = builder.build();
 
         logger.info("Preparing statements for " + CassandraManager.class.getSimpleName());
-        stmts = new DSEStmts.Prepared(session, config.getKeyspaceName(), config.getReplicationStrategy());
+        stmts = new CassandraStatements.Prepared(session, config.getKeyspaceName(), config.getReplicationStrategy());
 
         refreshSchema();
     }
