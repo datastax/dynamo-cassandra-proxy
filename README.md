@@ -1,5 +1,8 @@
 # dynamo-cassandra-proxy
 
+Build state:
+![build](https://api.travis-ci.org/datastax/dynamo-cassandra-proxy.svg?branch=master)
+
 `dynamo-cassandra-proxy` consists of a scalable proxy layer that sits between your app and Apache Cassandra. [See the design summary in docs](docs/Summary.md)
 
 It provides compatibility with the DynamoDB SDK which allows existing DynamoDB applications to read and write data to Cassandra without application changes.
