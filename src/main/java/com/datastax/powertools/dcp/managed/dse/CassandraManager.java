@@ -25,6 +25,7 @@ import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.datastax.powertools.dcp.DCProxyConfiguration;
+import com.google.common.collect.Maps;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.stream.Collectors;
-
-import com.google.common.collect.Maps;
 
 public class CassandraManager implements Managed {
     private final static Logger logger = LoggerFactory.getLogger(CassandraManager.class);
@@ -73,9 +72,16 @@ public class CassandraManager implements Managed {
             logger.info("Attempting to stand up container.");
             DockerHelper dh = new DockerHelper();
             dh.startDSE();
+
+            try {
+                Thread.sleep(60000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         session = builder.build();
+
 
         logger.info("Preparing statements for " + CassandraManager.class.getSimpleName());
         stmts = new CassandraStatements.Prepared(session, config.getKeyspaceName(), config.getReplicationStrategy());
