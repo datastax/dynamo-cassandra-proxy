@@ -165,27 +165,58 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         TableDef tableDef = cassandraManager.getTableDef(payload.getTableName());
         BoundStatement boundStatement = null;
 
-        for (Map.Entry<String, Condition> c : payload.getKeyConditions().entrySet()) {
-            if (c.getKey().equals(tableDef.getPartitionKey().getAttributeName())) {
-                PreparedStatement jsonPartitionStatement = tableDef.getJsonQueryPartitionStatement();
-                if (!c.getValue().getComparisonOperator().equals(ComparisonOperator.EQ.name()))
-                    throw new UnsupportedOperationException("Hash Key lookups only support equality conditions");
+        if (payload.getKeyConditions().size() ==1){
+            for (Map.Entry<String, Condition> c : payload.getKeyConditions().entrySet()) {
+                if (c.getKey().equals(tableDef.getPartitionKey().getAttributeName())) {
+                    PreparedStatement jsonPartitionStatement = tableDef.getJsonQueryPartitionStatement();
+                    if (!c.getValue().getComparisonOperator().equals(ComparisonOperator.EQ.name()))
+                        throw new UnsupportedOperationException("Hash Key lookups only support equality conditions");
 
 
-                List<AttributeValue> v = c.getValue().getAttributeValueList();
-                JsonNode valueJson = awsRequestMapper.valueToTree(v.iterator().next());
+                    List<AttributeValue> v = c.getValue().getAttributeValueList();
+                    JsonNode valueJson = awsRequestMapper.valueToTree(v.iterator().next());
 
-                Object value = getObjectFromJsonLeaf(valueJson.fields().next());
+                    Object value = getObjectFromJsonLeaf(valueJson.fields().next());
 
-                boundStatement = jsonPartitionStatement.bind(value);
-            }
-            if (c.getKey().equals(tableDef.getClusteringKey().get().getAttributeName())){
-                PreparedStatement jsonPartitionAndClusteringStatement ;
-                if(c.getValue().getComparisonOperator() == null) {
-                    throw new UnsupportedOperationException("null Comparison Operator not allowed");
+                    boundStatement = jsonPartitionStatement.bind(value);
                 }
-                jsonPartitionAndClusteringStatement = tableDef.getLazyJsonQueryPartitionAndClusteringStatement(ComparisonOperator.valueOf(c.getValue().getComparisonOperator()));
             }
+        }
+        if (payload.getKeyConditions().size() ==2) {
+
+            PreparedStatement jsonPartitionAndClusteringStatement = null;
+
+            Object partitionValue = null;
+            Object clusteringValue = null;
+
+            for (Map.Entry<String, Condition> c : payload.getKeyConditions().entrySet()) {
+                if (c.getKey().equals(tableDef.getPartitionKey().getAttributeName())) {
+                    PreparedStatement jsonPartitionStatement = tableDef.getJsonQueryPartitionStatement();
+                    if (!c.getValue().getComparisonOperator().equals(ComparisonOperator.EQ.name()))
+                        throw new UnsupportedOperationException("Hash Key lookups only support equality conditions");
+
+
+                    List<AttributeValue> v = c.getValue().getAttributeValueList();
+                    JsonNode valueJson = awsRequestMapper.valueToTree(v.iterator().next());
+
+                    partitionValue = getObjectFromJsonLeaf(valueJson.fields().next());
+
+                }
+
+                if (c.getKey().equals(tableDef.getClusteringKey().get().getAttributeName())) {
+                    if (c.getValue().getComparisonOperator() == null) {
+                        throw new UnsupportedOperationException("null Comparison Operator not allowed");
+                    }
+
+                    List<AttributeValue> v = c.getValue().getAttributeValueList();
+                    JsonNode valueJson = awsRequestMapper.valueToTree(v.iterator().next());
+
+                    clusteringValue = getObjectFromJsonLeaf(valueJson.fields().next());
+
+                    jsonPartitionAndClusteringStatement = tableDef.getLazyJsonQueryPartitionAndClusteringStatement(ComparisonOperator.valueOf(c.getValue().getComparisonOperator()));
+                }
+            }
+            boundStatement = jsonPartitionAndClusteringStatement.bind(partitionValue, clusteringValue);
         }
 
         return session().execute(boundStatement);

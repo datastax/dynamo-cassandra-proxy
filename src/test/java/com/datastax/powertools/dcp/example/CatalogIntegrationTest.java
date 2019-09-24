@@ -66,15 +66,20 @@ public class CatalogIntegrationTest extends AbstractDCPTest
         mapper.save(item);
 
         //Read Back
-        CatalogItem partitionKey = new CatalogItem();
+        CatalogItem getItem = new CatalogItem();
 
+        getItem.setId(102);
+        getItem.setTitle("Book 102 Title");
+
+
+        CatalogItem partitionKey = new CatalogItem();
         partitionKey.setId(102);
         Map<String, Condition> rangeKeyCondititions = new HashMap<>();
 
         //NOTE: The current DynamoDB service only allows up to one range key condition per query. Providing more than one range key condition will result in a SdkClientException.
         Collection<AttributeValue> attributeValueList = Arrays.asList(new AttributeValue("B"));
         Condition rangeCondition = new Condition().withAttributeValueList(attributeValueList)
-                .withComparisonOperator(ComparisonOperator.EQ);
+                .withComparisonOperator(ComparisonOperator.GE);
 
         rangeKeyCondititions.put("Title", rangeCondition);
 
@@ -86,15 +91,42 @@ public class CatalogIntegrationTest extends AbstractDCPTest
         CatalogItem r = itemList.get(0);
         Assert.assertEquals(item, r);
 
+        /*
+        //Complex Query
+        partitionKey.setId(102);
+        String filterExpression = "";
+        String projectionExpression = "";
+        String keyCoditionExpression = "";
+        Integer limit = 1;
+        String select = "";
+        boolean consistentRead = false;
+
+        queryExpression = new DynamoDBQueryExpression<CatalogItem>()
+                .withFilterExpression(filterExpression)
+                .withProjectionExpression(projectionExpression)
+                .withKeyConditionExpression(keyCoditionExpression)
+                .withLimit(limit)
+                .withSelect(select)
+                .withConsistentRead(consistentRead);
+
+        // consider implementing ExclusiveStartKey and ExpressionAttributeNames and Values
+
+        itemList = mapper.query(CatalogItem.class, queryExpression);
+
+        Assert.assertTrue(itemList.size() == 1);
+        r = itemList.get(0);
+        Assert.assertEquals(item, r);
+
+        */
 
 
         //Get Item
-        r = mapper.load(partitionKey);
+        r = mapper.load(getItem);
         Assert.assertEquals(item, r);
 
         //Delete Item
-        mapper.delete(partitionKey);
-        r = mapper.load(partitionKey);
+        mapper.delete(getItem);
+        r = mapper.load(getItem);
         Assert.assertTrue(null ==  r);
 
 
