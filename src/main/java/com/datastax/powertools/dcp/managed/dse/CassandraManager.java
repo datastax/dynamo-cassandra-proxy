@@ -73,11 +73,13 @@ public class CassandraManager implements Managed {
             DockerHelper dh = new DockerHelper();
             dh.startDSE();
 
+            //TODO
             try {
                 Thread.sleep(60000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
         }
 
         session = builder.build();
@@ -98,6 +100,10 @@ public class CassandraManager implements Managed {
             TableMetadata m = e.getValue();
             TableDef tableDef = new TableDef();
             String tableName = e.getKey().asInternal();
+
+            tableDef.setKeyspaceName(keyspaceName);
+            tableDef.setTableName("\""+tableName + "\"");
+            tableDef.setSession(session);
 
             PreparedStatement jsonPutStatement = stmts.prepare(String.format("INSERT INTO %s.\"%s\" JSON ?", keyspaceName, tableName));
             tableDef.setJsonPutStatement(jsonPutStatement);

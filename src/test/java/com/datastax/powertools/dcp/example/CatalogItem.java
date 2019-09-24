@@ -1,12 +1,13 @@
 package com.datastax.powertools.dcp.example;
 
-import java.util.Objects;
-import java.util.Set;
-
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIgnore;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
+
+import java.util.Objects;
+import java.util.Set;
 
 @DynamoDBTable(tableName="ProductCatalog")
 public class CatalogItem {
@@ -21,7 +22,7 @@ public class CatalogItem {
     public Integer getId() { return id; }
     public void setId(Integer id) {this.id = id; }
 
-    @DynamoDBAttribute(attributeName="Title")
+    @DynamoDBRangeKey(attributeName="Title")
     public String getTitle() {return title; }
     public void setTitle(String title) { this.title = title; }
 

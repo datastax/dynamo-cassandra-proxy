@@ -163,23 +163,29 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
 
     private ResultSet queryByKeyCondition(QueryRequest payload) {
         TableDef tableDef = cassandraManager.getTableDef(payload.getTableName());
-        PreparedStatement jsonStatement = tableDef.getJsonQueryPartitionStatement();
         BoundStatement boundStatement = null;
 
         for (Map.Entry<String, Condition> c : payload.getKeyConditions().entrySet()) {
-            if (!c.getKey().equals(tableDef.getPartitionKey().getAttributeName()))
-                throw new UnsupportedOperationException("Only supports key lookups");
+            if (c.getKey().equals(tableDef.getPartitionKey().getAttributeName())) {
+                PreparedStatement jsonPartitionStatement = tableDef.getJsonQueryPartitionStatement();
+                if (!c.getValue().getComparisonOperator().equals(ComparisonOperator.EQ.name()))
+                    throw new UnsupportedOperationException("Hash Key lookups only support equality conditions");
 
-            if (!c.getValue().getComparisonOperator().equals(ComparisonOperator.EQ.name()))
-                throw new UnsupportedOperationException("Only supports key equality lookups");
 
-            List<AttributeValue> v = c.getValue().getAttributeValueList();
-            JsonNode valueJson = awsRequestMapper.valueToTree(v.iterator().next());
+                List<AttributeValue> v = c.getValue().getAttributeValueList();
+                JsonNode valueJson = awsRequestMapper.valueToTree(v.iterator().next());
 
-            Object value = getObjectFromJsonLeaf(valueJson.fields().next());
+                Object value = getObjectFromJsonLeaf(valueJson.fields().next());
 
-            boundStatement = jsonStatement.bind(value);
-            break;
+                boundStatement = jsonPartitionStatement.bind(value);
+            }
+            if (c.getKey().equals(tableDef.getClusteringKey().get().getAttributeName())){
+                PreparedStatement jsonPartitionAndClusteringStatement ;
+                if(c.getValue().getComparisonOperator() == null) {
+                    throw new UnsupportedOperationException("null Comparison Operator not allowed");
+                }
+                jsonPartitionAndClusteringStatement = tableDef.getLazyJsonQueryPartitionAndClusteringStatement(ComparisonOperator.valueOf(c.getValue().getComparisonOperator()));
+            }
         }
 
         return session().execute(boundStatement);
@@ -627,9 +633,9 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
                 ScalarAttributeType.valueOf(clusteringKeyDef.get().getAttributeType()) : null;
 
         BoundStatement boundStatement = clusteringKey == null ?
-                                        selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey)) :
-                                        selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey),
-                                                getAttributeObject(clusteringKeyType, clusteringKey));
+                selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey)) :
+                selectStatement.bind(getAttributeObject(partitionKeyType, partitionKey),
+                        getAttributeObject(clusteringKeyType, clusteringKey));
 
         ResultSet result = session().execute(boundStatement);
 
@@ -668,7 +674,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     }
 
     private CqlSession session() {
-       return cassandraManager.getSession();
+        return cassandraManager.getSession();
     }
 
     private String stringify(JsonNode items) {

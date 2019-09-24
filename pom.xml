@@ -26,6 +26,11 @@
         <artifactId>java-driver-core</artifactId>
         <version>${java.driver.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.datastax.oss</groupId>
+        <artifactId>java-driver-query-builder</artifactId>
+        <version>${java.driver.version}</version>
+      </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-dynamodb</artifactId>
@@ -117,7 +122,7 @@
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <dropwizard.version>1.3.14</dropwizard.version>
       <java.version>11</java.version>
-      <java.driver.version>4.2.0</java.driver.version>
+      <java.driver.version>4.2.1</java.driver.version>
       <jaxb.version>2.2.11</jaxb.version>
       <docker.java.version>3.1.2</docker.java.version>
       <netty.version>4.0.56.Final</netty.version>

@@ -16,6 +16,7 @@
 package com.datastax.powertools.dcp.managed.dse;
 
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DriverTimeoutException;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 
 public class CassandraStatements {
@@ -41,7 +42,17 @@ public class CassandraStatements {
             create_keyspace = prepare(STMT_create_keyspace);
 
             //Ensure the dynamo keyspaceName exists
-            session.execute(create_keyspace.bind());
+            try {
+                session.execute(create_keyspace.bind());
+            } catch(DriverTimeoutException de){
+                try {
+                    Thread.sleep(10000);
+                    session.execute(create_keyspace.bind());
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             get_columns = prepare(STMT_get_columns);
         }
@@ -53,5 +64,6 @@ public class CassandraStatements {
 
             return prepared;
         }
+
     }
 }

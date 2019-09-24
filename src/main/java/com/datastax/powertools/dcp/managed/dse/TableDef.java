@@ -16,16 +16,39 @@
 package com.datastax.powertools.dcp.managed.dse;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
-
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
-import java.util.Optional;
-
+import com.datastax.oss.driver.api.querybuilder.select.Select;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.selectFrom;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.ASCII;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.BIGINT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.BLOB;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.BOOLEAN;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.COUNTER;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.DATE;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.DECIMAL;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.DOUBLE;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.FLOAT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.INET;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.INT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.SMALLINT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.TIME;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.TIMEUUID;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.TINYINT;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.UUID;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.VARCHAR;
+import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.VARINT;
 
 public class TableDef {
     private static final Logger logger = LoggerFactory.getLogger(TableDef.class);
@@ -38,6 +61,16 @@ public class TableDef {
     private PreparedStatement jsonQueryRowStatement;
     private PreparedStatement deleteStatement;
     private PreparedStatement queryRowStatement;
+    private PreparedStatement jsonQueryPartitionAndClusteringStatement;
+    private Map<ComparisonOperator, PreparedStatement> jsonQueryRangeStatementMap = new HashMap<>();
+    private String keyspaceName;
+    private CqlSession session;
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
+    private String tableName;
 
     public PreparedStatement getQueryRowStatement() {
         return queryRowStatement;
@@ -134,5 +167,72 @@ public class TableDef {
 
     public void setQueryRowStatement(PreparedStatement queryRowStatement) {
         this.queryRowStatement = queryRowStatement;
+    }
+
+    public PreparedStatement getLazyJsonQueryPartitionAndClusteringStatement(ComparisonOperator comparisonOperator) {
+
+        PreparedStatement preparedStatment = null;
+
+        if (jsonQueryRangeStatementMap.containsKey(comparisonOperator)){
+            preparedStatment = jsonQueryRangeStatementMap.get(comparisonOperator);
+        }
+        else{
+            String clustering = "\"" + clusteringKey.get().getAttributeName() + "\"";
+            String partition= "\"" + partitionKey.getAttributeName() + "\"";
+            Select select = selectFrom(keyspaceName, tableName).all().whereColumn(partition).isEqualTo(bindMarker());
+            switch (comparisonOperator) {
+                case EQ:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).isEqualTo(bindMarker()).build());
+                    break;
+                case NE:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).isNotEqualTo(bindMarker()).build());
+                    break;
+                case IN:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).in(bindMarker()).build());
+                    break;
+                case LE:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).isLessThanOrEqualTo(bindMarker()).build());
+                    break;
+                case LT:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).isLessThan(bindMarker()).build());
+                    break;
+                case GE:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).isGreaterThanOrEqualTo(bindMarker()).build());
+                    break;
+                case GT:
+                    preparedStatment = session.prepare(select.whereColumn(clustering).isGreaterThan(bindMarker()).build());
+                    break;
+                case BETWEEN:
+                    preparedStatment = session.prepare(select
+                            .whereColumn(clustering).isGreaterThanOrEqualTo(bindMarker())
+                            .whereColumn(clustering).isLessThanOrEqualTo(bindMarker())
+                            .build()
+                    );
+                    break;
+                case NOT_NULL:
+                    preparedStatment = session.prepare(select
+                            .whereColumn(clustering).isNotNull()
+                            .build()
+                    );
+                    break;
+                case NULL:
+                    throw new UnsupportedOperationException("CQL does not support null clustering columns");
+                case CONTAINS:
+                    throw new UnsupportedOperationException("Contains - feature unsupported");
+                case NOT_CONTAINS:
+                    throw new UnsupportedOperationException("Not Contains - feature unsupported");
+                case BEGINS_WITH:
+                    throw new UnsupportedOperationException("Begins With - feature unsupported");
+            }
+        }
+        return preparedStatment;
+    }
+
+    public void setKeyspaceName(String keyspaceName) {
+        this.keyspaceName = keyspaceName;
+    }
+
+    public void setSession(CqlSession session) {
+        this.session = session;
     }
 }

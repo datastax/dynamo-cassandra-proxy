@@ -1,26 +1,30 @@
 package com.datastax.powertools.dcp.example;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
+import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.CreateTableResult;
-import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
 import com.amazonaws.services.dynamodbv2.model.DeleteTableResult;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.datastax.powertools.dcp.AbstractDCPTest;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 public class CatalogIntegrationTest extends AbstractDCPTest
 {
@@ -31,9 +35,14 @@ public class CatalogIntegrationTest extends AbstractDCPTest
 
         List<AttributeDefinition> attributeDefinitions= new ArrayList<>();
         attributeDefinitions.add(new AttributeDefinition().withAttributeName("Id").withAttributeType("N"));
+        attributeDefinitions.add(new AttributeDefinition().withAttributeName("Title").withAttributeType("S"));
 
         List<KeySchemaElement> keySchema = new ArrayList<>();
-        keySchema.add(new KeySchemaElement().withAttributeName("Id").withKeyType(KeyType.HASH));
+        keySchema.add(new KeySchemaElement()
+                .withAttributeName("Id").withKeyType(KeyType.HASH));
+
+        keySchema.add(new KeySchemaElement()
+                .withAttributeName("Title").withKeyType(KeyType.RANGE));
 
         CreateTableRequest request = new CreateTableRequest()
                 .withTableName("ProductCatalog")
@@ -60,13 +69,24 @@ public class CatalogIntegrationTest extends AbstractDCPTest
         CatalogItem partitionKey = new CatalogItem();
 
         partitionKey.setId(102);
-        DynamoDBQueryExpression<CatalogItem> queryExpression = new DynamoDBQueryExpression<CatalogItem>().withHashKeyValues(partitionKey);
+        Map<String, Condition> rangeKeyCondititions = new HashMap<>();
+
+        //NOTE: The current DynamoDB service only allows up to one range key condition per query. Providing more than one range key condition will result in a SdkClientException.
+        Collection<AttributeValue> attributeValueList = Arrays.asList(new AttributeValue("B"));
+        Condition rangeCondition = new Condition().withAttributeValueList(attributeValueList)
+                .withComparisonOperator(ComparisonOperator.EQ);
+
+        rangeKeyCondititions.put("Title", rangeCondition);
+
+        DynamoDBQueryExpression<CatalogItem> queryExpression = new DynamoDBQueryExpression<CatalogItem>().withHashKeyValues(partitionKey).withRangeKeyConditions(rangeKeyCondititions);
 
         List<CatalogItem> itemList = mapper.query(CatalogItem.class, queryExpression);
 
         Assert.assertTrue(itemList.size() == 1);
         CatalogItem r = itemList.get(0);
         Assert.assertEquals(item, r);
+
+
 
         //Get Item
         r = mapper.load(partitionKey);
