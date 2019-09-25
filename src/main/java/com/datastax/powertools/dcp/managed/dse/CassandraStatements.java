@@ -18,6 +18,9 @@ package com.datastax.powertools.dcp.managed.dse;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.DriverTimeoutException;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CassandraStatements {
     private static final String KEYSPACE_PATTERN = ";;;KEYSPACE;;;";
@@ -33,6 +36,7 @@ public class CassandraStatements {
 
         final PreparedStatement get_columns;
         final PreparedStatement create_keyspace;
+        private final Logger logger = LoggerFactory.getLogger(CassandraStatements.class);
 
         public Prepared(CqlSession session, String keyspace, String replicationStrategy) {
             this.keyspace = keyspace;
@@ -42,16 +46,20 @@ public class CassandraStatements {
             create_keyspace = prepare(STMT_create_keyspace);
 
             //Ensure the dynamo keyspaceName exists
+            ResultSet result = null;
             try {
-                session.execute(create_keyspace.bind());
+                logger.info("ensuring the keyspace exists");
+                result = session.execute(create_keyspace.bind());
             } catch(DriverTimeoutException de){
                 try {
                     Thread.sleep(10000);
-                    session.execute(create_keyspace.bind());
+                    result = session.execute(create_keyspace.bind());
                     Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                if (result != null && result.wasApplied())
+                  logger.info("Keyspace exists");
             }
 
             get_columns = prepare(STMT_get_columns);

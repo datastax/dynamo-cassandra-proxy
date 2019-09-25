@@ -74,11 +74,13 @@ public class CassandraManager implements Managed {
             dh.startDSE();
 
             //TODO
+            /*
             try {
                 Thread.sleep(60000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            */
 
         }
 
