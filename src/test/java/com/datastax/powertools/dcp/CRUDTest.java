@@ -1,9 +1,5 @@
 package com.datastax.powertools.dcp;
 
-import java.util.Date;
-
-import org.junit.Test;
-
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
@@ -12,7 +8,10 @@ import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import org.junit.Test;
 import org.testng.Assert;
+
+import java.util.Date;
 
 public class CRUDTest extends AbstractDCPTest
 {

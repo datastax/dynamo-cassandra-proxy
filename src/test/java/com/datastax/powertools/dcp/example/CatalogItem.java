@@ -15,6 +15,7 @@ public class CatalogItem {
     private Integer id;
     private String title;
     private String ISBN;
+    private Integer booksInStock;
     private Set<String> bookAuthors;
     private String someProp;
 
@@ -22,7 +23,7 @@ public class CatalogItem {
     public Integer getId() { return id; }
     public void setId(Integer id) {this.id = id; }
 
-    @DynamoDBRangeKey(attributeName="Title")
+   @DynamoDBRangeKey(attributeName="Title")
     public String getTitle() {return title; }
     public void setTitle(String title) { this.title = title; }
 
@@ -33,6 +34,11 @@ public class CatalogItem {
     @DynamoDBAttribute(attributeName="Authors")
     public Set<String> getBookAuthors() { return bookAuthors; }
     public void setBookAuthors(Set<String> bookAuthors) { this.bookAuthors = bookAuthors; }
+
+    @DynamoDBAttribute(attributeName="booksInStock")
+    public Integer getBooksInStock() { return booksInStock; }
+    public void setBooksInStock(Integer booksInStock) {this.booksInStock= booksInStock; }
+
 
     @DynamoDBIgnore
     public String getSomeProp() { return someProp; }
@@ -47,12 +53,13 @@ public class CatalogItem {
         return id.equals(that.id) &&
                 Objects.equals(title, that.title) &&
                 Objects.equals(ISBN, that.ISBN) &&
+                Objects.equals(booksInStock, that.booksInStock) &&
                 Objects.equals(bookAuthors, that.bookAuthors);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(id, title, ISBN, bookAuthors);
+        return Objects.hash(id, title, ISBN, bookAuthors, booksInStock);
     }
 }

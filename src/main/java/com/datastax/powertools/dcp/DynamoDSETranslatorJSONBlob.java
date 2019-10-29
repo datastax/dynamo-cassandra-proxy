@@ -104,8 +104,18 @@ import static com.datastax.oss.protocol.internal.ProtocolConstants.DataType.VARI
  */
 public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
     private final static Logger logger = LoggerFactory.getLogger(DynamoDSETranslatorJSONBlob.class);
-    private static final Pattern queryPattern = Pattern.compile(".*(:\\S+)");
+    //private static final Pattern queryPattern = Pattern.compile(".*(:\\S+)");
+    private static final Pattern queryPattern = Pattern.compile("(\\S+)\\s?([?:=|<|>])\\s?:\\S+(?:\\s?\\S+\\s?(\\S+)\\s?(=|<|>)\\s?:\\S+)?");
 
+    private static final Map<String, ComparisonOperator> operatorConverter = new HashMap()
+    {{
+            put("=", ComparisonOperator.EQ);
+            put("!=", ComparisonOperator.NE);
+            put("<=", ComparisonOperator.LE);
+            put("<", ComparisonOperator.LT);
+            put(">=", ComparisonOperator.GE);
+            put(">", ComparisonOperator.GT);
+    }};
 
     public DynamoDSETranslatorJSONBlob(CassandraManager cassandraManager) {
         super(cassandraManager);
@@ -124,7 +134,7 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         else
             throw new UnsupportedOperationException("un-supported query type");
 
-        try
+       try
         {
             Collection<Map<String, AttributeValue>> items = new HashSet<Map<String, AttributeValue>>();
             for (Row row : resultSet)
@@ -144,6 +154,11 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
                 Map<String, AttributeValue> itemSet = blobToItemSet(row.getString("json_blob"));
                 itemSet.putAll(keysSet);
 
+                if (payload.getFilterExpression() != null){
+                    if(!matchesFilterExpression(itemSet, payload)){
+                        continue;
+                    }
+                }
                 items.add(itemSet);
             }
 
@@ -159,6 +174,50 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
             ddbResponse.setError(msg);
             return ddbResponse;
         }
+    }
+
+    private boolean matchesFilterExpression(Map<String, AttributeValue> itemSet, QueryRequest payload) {
+
+        String filterExpression = payload.getFilterExpression();
+        Matcher matcher = queryPattern.matcher(filterExpression);
+                if (matcher.find())
+        {
+            BoundStatement boundStatement = null;
+
+            for (int i =0; i < matcher.groupCount();i = i+2) {
+                Map<String, AttributeValue> expressionAtributeValues = payload.getExpressionAttributeValues();
+
+                String attributeName = matcher.group(i + 1);
+                AttributeValue itemAttributeValue = itemSet.get(attributeName);
+
+                JsonNode valueJson = awsRequestMapper.valueToTree(itemAttributeValue);
+                Comparable<Object> itemValue = (Comparable<Object>) getObjectFromJsonLeaf(valueJson.fields().next());
+
+                AttributeValue expressionAttributeValue = expressionAtributeValues.get(attributeName);
+
+                valueJson = awsRequestMapper.valueToTree(expressionAttributeValue);
+                Comparable<Object> expressionValue = (Comparable<Object>) getObjectFromJsonLeaf(valueJson.fields().next());
+
+                String operator = matcher.group(i + 2);
+
+                switch (operator) {
+                    case "=":
+                        return itemValue.equals(expressionValue);
+                    case "!=":
+                        return !itemValue.equals(expressionValue);
+                    case "<=":
+                        return itemValue.compareTo(expressionValue) <= 0;
+                    case "<":
+                        return itemValue.compareTo(expressionValue) < 0;
+                    case ">=":
+                        return itemValue.compareTo(expressionValue) >= 0;
+                    case ">":
+                        return itemValue.compareTo(expressionValue) > 0;
+                }
+            }
+        }
+        throw new UnsupportedOperationException("Error parsing filter expression: " + filterExpression);
+
     }
 
     private ResultSet queryByKeyCondition(QueryRequest payload) {
@@ -232,23 +291,52 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
         {
             Map<String, AttributeValue> expressionAttributeValues = payload.getExpressionAttributeValues();
             BoundStatement boundStatement = null;
-            for (Map.Entry<String, AttributeValue> stringAttributeValueEntry : expressionAttributeValues.entrySet())
-            {
-                if (!stringAttributeValueEntry.getKey().equals(tableDef.getPartitionKey().getAttributeName()))
-                    throw new UnsupportedOperationException("Only supports key lookups");
 
-                JsonNode valueJson = awsRequestMapper.valueToTree(stringAttributeValueEntry.getValue());
-                Object value = getObjectFromJsonLeaf(valueJson.fields().next());
+            //Partition Key
+            if (matcher.groupCount() == 2) {
+                for (Map.Entry<String, AttributeValue> stringAttributeValueEntry : expressionAttributeValues.entrySet()) {
+                    if (!stringAttributeValueEntry.getKey().equals(tableDef.getPartitionKey().getAttributeName()))
+                        continue;
 
-                boundStatement = jsonStatement.bind(value);
-                break;
+                    JsonNode valueJson = awsRequestMapper.valueToTree(stringAttributeValueEntry.getValue());
+                    Object value = getObjectFromJsonLeaf(valueJson.fields().next());
+
+                    boundStatement = jsonStatement.bind(value);
+                    break;
+                }
+            }
+            //Partition Key and Clustering Columns
+            if (matcher.groupCount() == 4) {
+                PreparedStatement jsonPartitionAndClusteringStatement = null;
+
+                Object partitionValue = null;
+                Object clusteringValue = null;
+
+                AttributeValue v = expressionAttributeValues.get(tableDef.getPartitionKey().getAttributeName());
+                JsonNode valueJson = awsRequestMapper.valueToTree(v);
+                partitionValue = getObjectFromJsonLeaf(valueJson.fields().next());
+
+                v = expressionAttributeValues.get(tableDef.getClusteringKey().get().getAttributeName());
+                valueJson = awsRequestMapper.valueToTree(v);
+                clusteringValue = getObjectFromJsonLeaf(valueJson.fields().next());
+
+                ComparisonOperator comparisonOperator;
+                if (tableDef.getClusteringKey().get().getAttributeName().equals(matcher.group(1))) {
+                    comparisonOperator = operatorConverter.get(matcher.group(2));
+                } else if (tableDef.getClusteringKey().get().getAttributeName().equals(matcher.group(3))) {
+                    comparisonOperator = operatorConverter.get(matcher.group(4));
+                } else{
+                    throw new UnsupportedOperationException("Invalid Expression Values");
+                }
+                jsonPartitionAndClusteringStatement = tableDef.getLazyJsonQueryPartitionAndClusteringStatement(comparisonOperator);
+                boundStatement = jsonPartitionAndClusteringStatement.bind(partitionValue, clusteringValue);
+
             }
             return session().execute(boundStatement);
         }
 
         throw new UnsupportedOperationException("Error parsing expression: " + payload.getKeyConditionExpression());
     }
-
 
 
     private Map<String, AttributeValue> blobToItemSet(String json_blob) throws IOException
@@ -268,14 +356,14 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
                 if (!dynamoTypes.contains(pair.getKey())) {
                     throw new UnsupportedOperationException("Nested not implemented");
                 } else {
-                    itemSet.put(item.getKey(), getAttributeFromJsonLeaf(item.getValue()));
+                    itemSet.put(item.getKey(), getAttributeFromJsonLeaf(item.getValue(), pair.getKey()));
                 }
             }
         }
         return itemSet;
     }
 
-    private AttributeValue getAttributeFromJsonLeaf(JsonNode values) {
+    private AttributeValue getAttributeFromJsonLeaf(JsonNode values, String attributeType) {
         AttributeValue av = new AttributeValue();
 
         Iterator<Map.Entry<String, JsonNode>> it;
@@ -285,6 +373,8 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
             JsonNodeType type = leaf.getValue().getNodeType();
             av = new AttributeValue();
             JsonNode value = leaf.getValue();
+
+            //TODO: nested switch is not maintainable, do something prettier
             switch (type) {
                 case ARRAY: {
                     Set set = new HashSet();
@@ -325,7 +415,21 @@ public class DynamoDSETranslatorJSONBlob extends DynamoDSETranslator {
                 case POJO:
                     break;
                 case STRING:
-                    av.setS(value.asText());
+                    switch (ScalarAttributeType.fromValue(attributeType)) {
+                        case S:
+                            av.setS(value.asText());
+                            break;
+                        case N:
+                            av.setN(value.asText());
+                            break;
+                       case B:
+                            try {
+                                av.setB(ByteBuffer.wrap(leaf.getValue().binaryValue()));
+                            } catch (IOException e) {
+                                throw new IOError(e);
+                            }
+                            break;
+                    }
                     break;
             }
             ;
