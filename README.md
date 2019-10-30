@@ -128,7 +128,12 @@ Check means currently completed:
  - [x] DeleteTable - Done in json_blob
  - [x] GetItem - Done in json_blob
  - [x] PutItem - Done in json_blob
- - [ ] Query - Simple Case done in json_blob
+ - [x] Query - key condition expression (json_blob)
+ - [x] Query - key conditions (json_blob)
+ - [x] Query - filter expressions (json_blob)
+ - [ ] Query - projection expressions (json_blob)
+ - [ ] Query - limit (json_blob)
+ - [ ] Query - withSelect (json_blob)
  - [ ] Scan
  - [x] Hybrid functionality - DDB to Cassandra
  - [ ] Hybrid functionality - Cassandra to DDB
@@ -151,6 +156,7 @@ Check means currently completed:
 - UntagResource
 - UpdateTable
 - UpdateTimeToLive
+- ConsistentRead
 
 ## License
 This project is licensed under the Apache Public License 2.0
