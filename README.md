@@ -96,6 +96,24 @@ To terminate your deploymet run:
 
 ## To run on GKE
 
+### Create cluster
+
+If you do not have a GKE cluster yet, [create one per the gcloud docs](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-cluster) or use this sample commands:
+
+
+create:
+
+    gcloud container clusters create dynamo-proxy-cluster \
+        --cluster-version=1.12.5-gke.10 --zone us-west1-b \
+        --machine-type n1-standard-4  --num-nodes 1 
+
+configure kubectl:
+
+    gcloud container clusters get-credentials k8-12-5-10-gke-n1-std-4 --zone us-west1-b
+
+### Deploy the proxy
+
+
 Set up configMap
 
     kubectl create configmap cassandra-config \
