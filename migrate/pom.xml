@@ -14,7 +14,7 @@
     <scalatest.version>3.0.0</scalatest.version>
     <connector.version>2.4.0</connector.version>
     <cassandra.version>3.2</cassandra.version>
-    <junit.version>4.12</junit.version>
+    <junit.version>4.13.1</junit.version>
   </properties>
 
   <!--
